@@ -48,7 +48,7 @@ import java.util.Optional;
 public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
     
     private final ConfigurationProperties props;
-    
+
     @SuppressWarnings("rawtypes")
     private final Map<ShardingSphereRule, SQLRouter> routers;
     
@@ -61,18 +61,24 @@ public final class PartialSQLRouteExecutor implements SQLRouteExecutor {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public RouteContext route(final ConnectionContext connectionContext, final QueryContext queryContext, final RuleMetaData globalRuleMetaData, final ShardingSphereDatabase database) {
         RouteContext result = new RouteContext();
+        // 查询 HINT 配置的数据源
         Optional<String> dataSourceName = findDataSourceByHint(queryContext.getHintValueContext(), database.getResourceMetaData().getStorageUnits());
         if (dataSourceName.isPresent()) {
+            // 存在 HINT 添加路由执行单元
             result.getRouteUnits().add(new RouteUnit(new RouteMapper(dataSourceName.get(), dataSourceName.get()), Collections.emptyList()));
             return result;
         }
+        // 循环 路由器
         for (Entry<ShardingSphereRule, SQLRouter> entry : routers.entrySet()) {
             if (result.getRouteUnits().isEmpty()) {
+                // 创建路由上下文
+                // createRouteContext 重点 sql 路由的, org.apache.shardingsphere.sharding.route.engine.ShardingSQLRouter.createRouteContext
                 result = entry.getValue().createRouteContext(queryContext, globalRuleMetaData, database, entry.getKey(), props, connectionContext);
             } else {
                 entry.getValue().decorateRouteContext(result, queryContext, database, entry.getKey(), props, connectionContext);
             }
         }
+        // 没有找到路由处理
         if (result.getRouteUnits().isEmpty() && 1 == database.getResourceMetaData().getStorageUnits().size()) {
             String singleDataSourceName = database.getResourceMetaData().getStorageUnits().keySet().iterator().next();
             result.getRouteUnits().add(new RouteUnit(new RouteMapper(singleDataSourceName, singleDataSourceName), Collections.emptyList()));

@@ -1,0 +1,158 @@
+# com.zaxxer.hikari.pool.HikariPool.HikariPool
+dataSources:
+  pxb7_dev:
+    url: jdbc:mysql://172.30.97.11:3306/pxb7_dev?useUnicode=true&characterEncoding=utf8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&serverTimezone=GMT%2B8
+    username: pxb7_dev
+    password: pxb7_dev#Hg5Re3po
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 4
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: HikariPool-pxb7_dev
+  db0:
+    url: jdbc:mysql://172.30.97.11:3306/test01?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: test01
+    password: pxb7_test01
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 4
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: db0
+#  db-slave0:
+#    url: jdbc:mysql://172.30.97.17:3306/test01?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+#    username: test01
+#    password: pxb7_test01
+#    driverClassName: com.mysql.cj.jdbc.Driver
+#    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+#    validationTimeout: 5000
+#    connectionTimeout: 30000
+#    maximumPoolSize: 4
+#    minimumIdle: 1
+#    idleTimeout: 600000
+#    leakDetectionThreshold: 0
+#    keepAliveTime: 30000
+#    poolName: db-slave0
+  db1:
+    url: jdbc:mysql://172.30.97.11:3307/test05?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: test01
+    password: pxb7_test01
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 4
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: db1
+#  db-slave1:
+#    url: jdbc:mysql://172.30.97.17:3307/test05?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+#    username: test01
+#    password: pxb7_test01
+#    driverClassName: com.mysql.cj.jdbc.Driver
+#    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+#    validationTimeout: 5000
+#    connectionTimeout: 30000
+#    maximumPoolSize: 4
+#    minimumIdle: 1
+#    idleTimeout: 600000
+#    leakDetectionThreshold: 0
+#    keepAliveTime: 30000
+#    poolName: db-slave1
+
+
+mode:
+  type: Standalone
+
+
+rules:
+  - !SINGLE
+    tables:
+      - "pxb7_dev.*"
+    defaultDataSource: pxb7_dev # 默认数据源，仅在执行 CREATE TABLE 创建单表时有效。缺失值为空，表示随机单播路由。
+#  - !READWRITE_SPLITTING
+#    dataSources:
+#      readwrite_ds0:
+#        writeDataSourceName: db0
+#        readDataSourceNames: [db-slave0]
+#        transactionalReadQueryStrategy: PRIMARY
+#        loadBalancerName: round_robin
+#      readwrite_ds1:
+#        writeDataSourceName: db1
+#        readDataSourceNames: [db-slave1]
+#        loadBalancerName: round_robin
+#        transactionalReadQueryStrategy: PRIMARY
+#    loadBalancers:
+#      round_robin:
+#        type: ROUND_ROBIN
+  - !SHARDING
+    keyGenerators:
+      custom_key_generator:
+        type: MyIdGen
+    tables:
+      t_order:
+        actualDataNodes: db$->{0..1}.t_order
+        databaseStrategy:
+#          standard:   #  standard 标准、complex 复合、hint. none
+          complex:   #  standard 标准、complex 复合、hint. none
+#            shardingColumn: user_id
+            shardingColumns: user_id,order_no
+            shardingAlgorithmName: my_complex_t_order_inline
+#            shardingAlgorithmName: my_t_order_inline
+#            shardingAlgorithmName: t_order_inline
+        keyGenerateStrategy:
+          column: id
+          keyGeneratorName: custom_key_generator
+      t_order_item:
+        actualDataNodes: db$->{0..1}.t_order_item
+        databaseStrategy:
+          standard:
+            shardingColumn: user_id
+#            shardingAlgorithmName: my_t_order_inline
+            shardingAlgorithmName: t_order_inline
+        keyGenerateStrategy:
+          column: id
+          keyGeneratorName: custom_key_generator
+#    bindingTables:
+#      - t_order, t_order_item
+#    auditors:
+#      sharding_key_required_auditor:
+##        type: DML_SHARDING_CONDITIONS
+#        type: MY_SHARDING_AUDIT_ALGORITHM
+    shardingAlgorithms:
+      my_t_order_inline:
+        type: CLASS_BASED
+        props:
+          strategy: STANDARD  #  STANDARD 标准、COMPLEX 复合、HINT
+          algorithmClassName: org.apache.shardingsphere.driver.study.MyShardingAlgorithm # 自定义类
+          number: 5 # 自定义属性
+          allow-range-query-with-inline-sharding: true # 自定义属性 （是否允许范围查询）
+      my_complex_t_order_inline:
+        type: CLASS_BASED
+        props:
+          strategy: COMPLEX  #  STANDARD 标准、COMPLEX 复合、HINT
+          algorithmClassName: org.apache.shardingsphere.driver.study.MyComplexShardingAlgorithm # 自定义类
+          DB_NAME: db
+          allow-range-query-with-inline-sharding: true # 自定义属性 （是否允许范围查询）
+      t_order_inline:
+        type: INLINE
+        props:
+          algorithm-expression: db$->{user_id % 2} # 分片算法表达式
+          allow-range-query-with-inline-sharding: true # 允许范围查询
+
+# 文档: 用户手册, 通用配置, 属性配置
+props:
+  sql-show: true
+
+

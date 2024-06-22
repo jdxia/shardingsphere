@@ -69,8 +69,12 @@ public final class SQLRewriteEntry {
      * @return route unit and SQL rewrite result map
      */
     public SQLRewriteResult rewrite(final QueryContext queryContext, final RouteContext routeContext, final ConnectionContext connectionContext) {
+        // 创建改写上下文, 重点 sql改写
         SQLRewriteContext sqlRewriteContext = createSQLRewriteContext(queryContext, routeContext, connectionContext);
+        // 获取SQL 翻译规则
         SQLTranslatorRule rule = globalRuleMetaData.getSingleRule(SQLTranslatorRule.class);
+        // 判断路由是否为空
+        // 这里不为空：创建 RouteSQLRewriteEngine 并执行  rewrite 重点 sql改写
         return routeContext.getRouteUnits().isEmpty()
                 ? new GenericSQLRewriteEngine(rule, database, globalRuleMetaData).rewrite(sqlRewriteContext, queryContext)
                 : new RouteSQLRewriteEngine(rule, database, globalRuleMetaData).rewrite(sqlRewriteContext, routeContext, queryContext);
@@ -78,9 +82,13 @@ public final class SQLRewriteEntry {
     
     private SQLRewriteContext createSQLRewriteContext(final QueryContext queryContext, final RouteContext routeContext, final ConnectionContext connectionContext) {
         HintValueContext hintValueContext = queryContext.getHintValueContext();
+        // 创建 sqlStatementContext
         SQLRewriteContext result = new SQLRewriteContext(database, queryContext.getSqlStatementContext(), queryContext.getSql(), queryContext.getParameters(), connectionContext, hintValueContext);
+        // 装饰处理
         decorate(decorators, result, routeContext, hintValueContext);
+        // 生成 Token
         result.generateSQLTokens();
+        // 回到一开始的地方
         return result;
     }
     

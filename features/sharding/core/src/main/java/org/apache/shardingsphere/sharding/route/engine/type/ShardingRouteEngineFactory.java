@@ -95,21 +95,26 @@ public final class ShardingRouteEngineFactory {
                                                   final RuleMetaData globalRuleMetaData) {
         SQLStatementContext sqlStatementContext = queryContext.getSqlStatementContext();
         SQLStatement sqlStatement = sqlStatementContext.getSqlStatement();
+        // 事务控制语言TCL 操作
         if (sqlStatement instanceof TCLStatement) {
             return new ShardingDatabaseBroadcastRoutingEngine();
         }
+        // DDL 操作
         if (sqlStatement instanceof DDLStatement) {
             if (sqlStatementContext instanceof CursorAvailable) {
                 return getCursorRouteEngine(shardingRule, database, sqlStatementContext, queryContext.getHintValueContext(), shardingConditions, props);
             }
             return getDDLRoutingEngine(shardingRule, database, sqlStatementContext, connectionContext, globalRuleMetaData);
         }
+        // DAL操作
         if (sqlStatement instanceof DALStatement) {
             return getDALRoutingEngine(shardingRule, database, sqlStatementContext, connectionContext);
         }
+        //  DCL 操作
         if (sqlStatement instanceof DCLStatement) {
             return getDCLRoutingEngine(shardingRule, database, sqlStatementContext);
         }
+        // DML操作, 重点
         return getDQLRoutingEngine(shardingRule, database, sqlStatementContext, queryContext.getHintValueContext(), shardingConditions, props, connectionContext);
     }
     
@@ -208,22 +213,28 @@ public final class ShardingRouteEngineFactory {
     private static ShardingRouteEngine getDQLRoutingEngine(final ShardingRule shardingRule, final ShardingSphereDatabase database, final SQLStatementContext sqlStatementContext,
                                                            final HintValueContext hintValueContext, final ShardingConditions shardingConditions, final ConfigurationProperties props,
                                                            final ConnectionContext connectionContext) {
+        // 获取SQL中的表名
         Collection<String> tableNames = sqlStatementContext.getTablesContext().getTableNames();
         if (sqlStatementContext.getSqlStatement() instanceof DMLStatement && shardingConditions.isAlwaysFalse() || tableNames.isEmpty()) {
+            // DML 操作、表名不为空
             return new ShardingUnicastRoutingEngine(sqlStatementContext, tableNames, connectionContext);
         }
         Collection<String> shardingLogicTableNames = shardingRule.getShardingLogicTableNames(tableNames);
         if (shardingLogicTableNames.isEmpty()) {
             return new ShardingIgnoreRoutingEngine();
         }
+        // 重点
         return getDQLRouteEngineForShardingTable(shardingRule, database, sqlStatementContext, hintValueContext, shardingConditions, props, shardingLogicTableNames);
     }
     
     private static ShardingRouteEngine getDQLRouteEngineForShardingTable(final ShardingRule shardingRule, final ShardingSphereDatabase database,
                                                                          final SQLStatementContext sqlStatementContext, final HintValueContext hintValueContext,
                                                                          final ShardingConditions shardingConditions, final ConfigurationProperties props, final Collection<String> tableNames) {
+        // 是否是绑定表的关联查询
         boolean allBindingTables = tableNames.size() > 1 && shardingRule.isAllBindingTables(database, sqlStatementContext, tableNames);
+        // 是否是单表操作 或者绑定表
         if (isShardingStandardQuery(shardingRule, tableNames, allBindingTables)) {
+            // 单表操作, 看 ShardingStandardRoutingEngine 的 route
             return new ShardingStandardRoutingEngine(getLogicTableName(shardingConditions, tableNames), shardingConditions, sqlStatementContext, hintValueContext, props);
         }
         // TODO config for cartesian set

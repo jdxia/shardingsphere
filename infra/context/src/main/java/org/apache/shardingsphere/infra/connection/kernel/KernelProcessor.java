@@ -48,8 +48,11 @@ public final class KernelProcessor {
      */
     public ExecutionContext generateExecutionContext(final QueryContext queryContext, final ShardingSphereDatabase database, final RuleMetaData globalRuleMetaData,
                                                      final ConfigurationProperties props, final ConnectionContext connectionContext) {
+        // 创建路由引擎 并执行路由方法, 重点 sql路由的
         RouteContext routeContext = route(queryContext, database, globalRuleMetaData, props, connectionContext);
+        // SQL 重写, 重点
         SQLRewriteResult rewriteResult = rewrite(queryContext, database, globalRuleMetaData, props, routeContext, connectionContext);
+        // 创建执行上下文
         ExecutionContext result = createExecutionContext(queryContext, database, routeContext, rewriteResult);
         logSQL(queryContext, props, result);
         return result;
@@ -57,12 +60,15 @@ public final class KernelProcessor {
     
     private RouteContext route(final QueryContext queryContext, final ShardingSphereDatabase database,
                                final RuleMetaData globalRuleMetaData, final ConfigurationProperties props, final ConnectionContext connectionContext) {
+        // 创建路由引擎 并执行路由方法, route方法 重点 sql路由的
         return new SQLRouteEngine(database.getRuleMetaData().getRules(), props).route(connectionContext, queryContext, globalRuleMetaData, database);
     }
     
     private SQLRewriteResult rewrite(final QueryContext queryContext, final ShardingSphereDatabase database, final RuleMetaData globalRuleMetaData,
                                      final ConfigurationProperties props, final RouteContext routeContext, final ConnectionContext connectionContext) {
+        // 创建改写器
         SQLRewriteEntry sqlRewriteEntry = new SQLRewriteEntry(database, globalRuleMetaData, props);
+        // 改写操作, 重点 sql改写
         return sqlRewriteEntry.rewrite(queryContext, routeContext, connectionContext);
     }
     

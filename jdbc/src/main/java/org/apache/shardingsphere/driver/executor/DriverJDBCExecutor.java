@@ -135,17 +135,22 @@ public final class DriverJDBCExecutor {
     public boolean execute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext, final QueryContext queryContext,
                            final Collection<RouteUnit> routeUnits, final JDBCExecutorCallback<Boolean> callback) throws SQLException {
         try {
+            // 执行 SQL, executeSQL方法中并没有真正的执行，只是在进程注册器中，添加了一个进程Process
             processEngine.executeSQL(executionGroupContext, queryContext);
+            // 执行
             List<Boolean> results = doExecute(executionGroupContext, queryContext.getSqlStatementContext(), routeUnits, callback);
             return null != results && !results.isEmpty() && null != results.get(0) && results.get(0);
         } finally {
+            // 完成执行
             processEngine.completeSQLExecution(executionGroupContext.getReportContext().getProcessId());
         }
     }
     
     private <T> List<T> doExecute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext, final SQLStatementContext sqlStatementContext, final Collection<RouteUnit> routeUnits,
                                   final JDBCExecutorCallback<T> callback) throws SQLException {
+        // 执行
         List<T> results = jdbcExecutor.execute(executionGroupContext, callback);
+        // 刷新元数据
         new MetaDataRefreshEngine(modeContextManager,
                 metaDataContexts.getMetaData().getDatabase(sqlStatementContext.getTablesContext().getDatabaseName().orElse(databaseName)), metaDataContexts.getMetaData().getProps())
                         .refresh(sqlStatementContext, routeUnits);

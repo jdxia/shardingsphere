@@ -55,6 +55,7 @@ public final class SQLParserRule implements GlobalRule {
      * @return SQL parser engine
      */
     public SQLParserEngine getSQLParserEngine(final DatabaseType databaseType) {
+        // 看 ShardingSphereSQLParserEngine 的 parse 方法
         return "Standard".equals(engineType)
                 ? new ShardingSphereSQLParserEngine(databaseType.getTrunkDatabaseType().orElse(databaseType), sqlStatementCache, parseTreeCache)
                 : new SimpleSQLParserEngine();

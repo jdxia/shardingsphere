@@ -40,18 +40,23 @@ public abstract class AbstractSQLBuilder implements SQLBuilder {
     
     @Override
     public final String toSQL() {
+        // Token 是否为空
         if (context.getSqlTokens().isEmpty()) {
             return context.getSql();
         }
         Collections.sort(context.getSqlTokens());
         StringBuilder result = new StringBuilder();
+        // 生成不包含 Token 的SQL
+        // SELECT  id,customer_id,product_id,product_name,product_price,quantity,total_price,order_time,delivery_time,status,address,phone  FROM
         result.append(context.getSql(), 0, context.getSqlTokens().get(0).getStartIndex());
+        // 循环所有 Token
         for (SQLToken each : context.getSqlTokens()) {
             if (each instanceof ComposableSQLToken) {
                 result.append(getComposableSQLTokenText((ComposableSQLToken) each));
             } else if (each instanceof SubstitutableColumnNameToken) {
                 result.append(((SubstitutableColumnNameToken) each).toString(routeUnit));
             } else {
+                // 添加 令牌对应的改写SQL
                 result.append(getSQLTokenText(each));
             }
             result.append(getConjunctionText(each));

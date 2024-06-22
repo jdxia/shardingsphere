@@ -56,12 +56,19 @@ public final class ComplexInlineShardingAlgorithm implements ComplexKeysSharding
     
     @Override
     public void init(final Properties props) {
+        // 算法表达式, algorithm-expression: xxx
+        // 内部会实例化成一个类 返回
         algorithmExpression = getAlgorithmExpression(props);
+
+        // 分片值, sharding-columns: xx
         shardingColumns = getShardingColumns(props);
+
+        // 是否允许范围分片, allow-range-query-with-inline-sharding: xxx
         allowRangeQuery = getAllowRangeQuery(props);
     }
     
     private String getAlgorithmExpression(final Properties props) {
+        // 获取算法表达式
         String algorithmExpression = props.getProperty(ALGORITHM_EXPRESSION_KEY);
         ShardingSpherePreconditions.checkState(!Strings.isNullOrEmpty(algorithmExpression), () -> new AlgorithmInitializationException(this, "Inline sharding algorithm expression can not be null."));
         return InlineExpressionParserFactory.newInstance(algorithmExpression.trim()).handlePlaceHolder();
@@ -78,14 +85,25 @@ public final class ComplexInlineShardingAlgorithm implements ComplexKeysSharding
     
     @Override
     public Collection<String> doSharding(final Collection<String> availableTargetNames, final ComplexKeysShardingValue<Comparable<?>> shardingValue) {
+        // 如果有范围查询
         if (!shardingValue.getColumnNameAndRangeValuesMap().isEmpty()) {
+            // 检查支不支持范围查询
             ShardingSpherePreconditions.checkState(allowRangeQuery,
                     () -> new UnsupportedSQLOperationException(String.format("Since the property of `%s` is false, inline sharding algorithm can not tackle with range query", ALLOW_RANGE_QUERY_KEY)));
+            // 注意范围查询会是全库路由
             return availableTargetNames;
         }
+
+        // 2. 获取分片键、值, 值可能有多个 比如 user_id in (2, 3 ,4)
         Map<String, Collection<Comparable<?>>> columnNameAndShardingValuesMap = shardingValue.getColumnNameAndShardingValuesMap();
+        // 这里有个奇怪的点, 如果分片列的值 == sql里面
         ShardingSpherePreconditions.checkState(shardingColumns.isEmpty() || shardingColumns.size() == columnNameAndShardingValuesMap.size(),
                 () -> new MismatchedComplexInlineShardingAlgorithmColumnAndValueSizeException(shardingColumns.size(), columnNameAndShardingValuesMap.size()));
+
+        /**
+         * 把sql里面的 分片键 对应 多个值,挨个循环 放到map里面 打平, Collection<Map<String, Comparable<?>>> result
+         * 挨个调用 doSharding
+         */
         return flatten(columnNameAndShardingValuesMap).stream().map(this::doSharding).collect(Collectors.toList());
     }
     
@@ -95,7 +113,11 @@ public final class ComplexInlineShardingAlgorithm implements ComplexKeysSharding
     }
     
     private Collection<Map<String, Comparable<?>>> flatten(final Map<String, Collection<Comparable<?>>> columnNameAndShardingValuesMap) {
+        // 列表里面是map
         Collection<Map<String, Comparable<?>>> result = new LinkedList<>();
+
+        // 把sql里面的 分片键 对应 多个值,
+        // 挨个循环 放到map里面 打平
         for (Entry<String, Collection<Comparable<?>>> entry : columnNameAndShardingValuesMap.entrySet()) {
             if (result.isEmpty()) {
                 for (Comparable<?> value : entry.getValue()) {

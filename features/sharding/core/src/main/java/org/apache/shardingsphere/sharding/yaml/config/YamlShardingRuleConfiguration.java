@@ -52,13 +52,15 @@ public final class YamlShardingRuleConfiguration implements YamlRuleConfiguratio
     private YamlShardingStrategyConfiguration defaultTableStrategy;
     
     private YamlKeyGenerateStrategyConfiguration defaultKeyGenerateStrategy;
-    
+
+    // 默认审计策略
     private YamlShardingAuditStrategyConfiguration defaultAuditStrategy;
     
     private Map<String, YamlAlgorithmConfiguration> shardingAlgorithms = new LinkedHashMap<>();
     
     private Map<String, YamlAlgorithmConfiguration> keyGenerators = new LinkedHashMap<>();
-    
+
+    // 审计算法
     private Map<String, YamlAlgorithmConfiguration> auditors = new LinkedHashMap<>();
     
     private String defaultShardingColumn;

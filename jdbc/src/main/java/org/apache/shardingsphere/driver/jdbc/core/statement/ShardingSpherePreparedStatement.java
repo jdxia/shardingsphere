@@ -196,13 +196,18 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
             throw new EmptySQLException().toSQLException();
         }
         this.connection = connection;
+        // 元数据
         metaDataContexts = connection.getContextManager().getMetaDataContexts();
+        //  提取hint值
         hintValueContext = SQLHintUtils.extractHint(sql);
+        // 移除sql里面的hint
         this.sql = SQLHintUtils.removeHint(sql);
         statements = new ArrayList<>();
         parameterSets = new ArrayList<>();
         SQLParserRule sqlParserRule = metaDataContexts.getMetaData().getGlobalRuleMetaData().getSingleRule(SQLParserRule.class);
+        // 创建SQL解析器, getSQLParserEngine重点, sql解析出什么类型的
         SQLParserEngine sqlParserEngine = sqlParserRule.getSQLParserEngine(metaDataContexts.getMetaData().getDatabase(connection.getDatabaseName()).getProtocolType());
+        // 解析 SQL
         sqlStatement = sqlParserEngine.parse(this.sql, true);
         sqlStatementContext = new SQLBindEngine(metaDataContexts.getMetaData(), connection.getDatabaseName(), hintValueContext).bind(sqlStatement, Collections.emptyList());
         databaseName = sqlStatementContext.getTablesContext().getDatabaseName().orElse(connection.getDatabaseName());
@@ -332,7 +337,9 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private DriverExecutionPrepareEngine<JDBCExecutionUnit, Connection> createDriverExecutionPrepareEngine() {
+        // 获取 maxConnectionsSizePerQuery 参数，默认 1
         int maxConnectionsSizePerQuery = metaDataContexts.getMetaData().getProps().<Integer>getValue(ConfigurationPropertyKey.MAX_CONNECTIONS_SIZE_PER_QUERY);
+        // 创建执行引擎
         return new DriverExecutionPrepareEngine<>(JDBCDriverType.PREPARED_STATEMENT, maxConnectionsSizePerQuery, connection.getDatabaseConnectionManager(), statementManager,
                 statementOption, metaDataContexts.getMetaData().getDatabase(databaseName).getRuleMetaData().getRules(),
                 metaDataContexts.getMetaData().getDatabase(databaseName).getResourceMetaData().getStorageUnits());
@@ -373,6 +380,9 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     private int useDriverToExecuteUpdate(final ExecutionContext executionContext) throws SQLException {
         ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext = createExecutionGroupContext(executionContext);
         cacheStatements(executionGroupContext.getInputGroups());
+        // 创建 JDBCExecutorCallback
+        // 将执行SQL 封装为异步线程池任务
+        // 进入执行阶段
         return executor.getRegularExecutor().executeUpdate(executionGroupContext,
                 executionContext.getQueryContext(), executionContext.getRouteContext().getRouteUnits(), createExecuteUpdateCallback());
     }
@@ -410,25 +420,32 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
                 return statements.iterator().next().execute();
             }
             clearPrevious();
+            // 创建查询上文文，封装了逻辑SQL、Hint值
             QueryContext queryContext = createQueryContext();
             handleAutoCommit(queryContext);
+            // 流量治理（如果配置了流量规则）
             trafficInstanceId = getInstanceIdAndSet(queryContext).orElse(null);
             if (null != trafficInstanceId) {
+                // executionUnit 执行单元，封装了真实的数据源、真实SQL
                 JDBCExecutionUnit executionUnit = createTrafficExecutionUnit(trafficInstanceId, queryContext);
                 return executor.getTrafficExecutor().execute(executionUnit, (statement, sql) -> ((PreparedStatement) statement).execute());
             }
+            // 是否是 Federation 执行引擎（这里是标准的）
             useFederation = decide(queryContext,
                     metaDataContexts.getMetaData().getDatabase(databaseName), metaDataContexts.getMetaData().getGlobalRuleMetaData());
             if (useFederation) {
                 ResultSet resultSet = executeFederationQuery(queryContext);
                 return null != resultSet;
             }
+            // 创建执行上下文, 重点: sql路由的
             executionContext = createExecutionContext(queryContext);
             if (hasRawExecutionRule()) {
                 Collection<ExecuteResult> results =
                         executor.getRawExecutor().execute(createRawExecutionGroupContext(executionContext), executionContext.getQueryContext(), new RawSQLExecutorCallback());
                 return results.iterator().next() instanceof QueryResult;
             }
+            // 执行 useDriverToExecute, 创建执行单元分组上下文并缓存，最后调用JDBC执行器
+            // 重点: sql执行
             return executeWithExecutionContext(executionContext);
             // CHECKSTYLE:OFF
         } catch (final RuntimeException ex) {
@@ -451,6 +468,7 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private boolean executeWithExecutionContext(final ExecutionContext executionContext) throws SQLException {
+        // useDriverToExecute 重点 sql 执行
         return isNeedImplicitCommitTransaction(connection, executionContext.getSqlStatementContext().getSqlStatement(), executionContext.getExecutionUnits().size() > 1)
                 ? executeWithImplicitCommitTransaction(() -> useDriverToExecute(executionContext))
                 : useDriverToExecute(executionContext);
@@ -495,14 +513,20 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
         }
         return result;
     }
-    
+
+    // 创建执行单元分组上下文并缓存，最后调用JDBC执行器
     private boolean useDriverToExecute(final ExecutionContext executionContext) throws SQLException {
+        // 重点, 进入到执行阶段的准备阶段
         ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext = createExecutionGroupContext(executionContext);
         cacheStatements(executionGroupContext.getInputGroups());
+        // 创建 JDBCExecutorCallback
+        // 将执行SQL 封装为异步线程池任务
+        // 进入执行阶段
         return executor.getRegularExecutor().execute(executionGroupContext,
                 executionContext.getQueryContext(), executionContext.getRouteContext().getRouteUnits(), createExecuteCallback());
     }
-    
+
+    // 创建了 JDBCExecutorCallback 对象
     private JDBCExecutorCallback<Boolean> createExecuteCallback() {
         boolean isExceptionThrown = SQLExecutorExceptionHandler.isExceptionThrown();
         return new JDBCExecutorCallback<Boolean>(metaDataContexts.getMetaData().getDatabase(databaseName).getProtocolType(),
@@ -521,7 +545,10 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private ExecutionGroupContext<JDBCExecutionUnit> createExecutionGroupContext(final ExecutionContext executionContext) throws SQLException {
+        // 创建预（准备）执行引擎, 这里会获取配置的maxConnectionsSizePerQuery 参数
         DriverExecutionPrepareEngine<JDBCExecutionUnit, Connection> prepareEngine = createDriverExecutionPrepareEngine();
+        // 调用 DriverExecutionPrepareEngine # prepare 重点 sql执行
+        // 准备阶段入口
         return prepareEngine.prepare(executionContext.getRouteContext(), executionContext.getExecutionUnits(),
                 new ExecutionGroupReportContext(connection.getProcessId(), databaseName, new Grantee("", "")));
     }
@@ -574,9 +601,13 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private ExecutionContext createExecutionContext(final QueryContext queryContext) {
+        // 相关规则元数据
         RuleMetaData globalRuleMetaData = metaDataContexts.getMetaData().getGlobalRuleMetaData();
+        // 数据库表元数据
         ShardingSphereDatabase currentDatabase = metaDataContexts.getMetaData().getDatabase(databaseName);
+        // 执行分片审计
         SQLAuditEngine.audit(queryContext.getSqlStatementContext(), queryContext.getParameters(), globalRuleMetaData, currentDatabase, null, queryContext.getHintValueContext());
+        // 生成执行上下文, generateExecutionContext 重点, sql路由的
         ExecutionContext result = kernelProcessor.generateExecutionContext(
                 queryContext, currentDatabase, globalRuleMetaData, metaDataContexts.getMetaData().getProps(), connection.getDatabaseConnectionManager().getConnectionContext());
         findGeneratedKey(result).ifPresent(optional -> generatedValues.addAll(optional.getGeneratedValues()));
@@ -597,8 +628,10 @@ public final class ShardingSpherePreparedStatement extends AbstractPreparedState
     }
     
     private MergedResult mergeQuery(final List<QueryResult> queryResults, final SQLStatementContext sqlStatementContext) throws SQLException {
+        // 创建归并引擎
         MergeEngine mergeEngine = new MergeEngine(metaDataContexts.getMetaData().getDatabase(databaseName),
                 metaDataContexts.getMetaData().getProps(), connection.getDatabaseConnectionManager().getConnectionContext());
+        // 归并操作
         return mergeEngine.merge(queryResults, sqlStatementContext);
     }
     

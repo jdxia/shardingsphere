@@ -54,6 +54,7 @@ public final class SQLStatementParserEngine {
      * @return SQL statement
      */
     public SQLStatement parse(final String sql, final boolean useCache) {
+        // useCache 是false
         return useCache ? sqlStatementCache.get(sql) : sqlStatementParserExecutor.parse(sql);
     }
 }

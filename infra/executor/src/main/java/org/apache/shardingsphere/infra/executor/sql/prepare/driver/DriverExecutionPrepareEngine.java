@@ -81,16 +81,22 @@ public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>
         }
         return result;
     }
-    
+
+    // 分组方法中，根据模式获取连接，并创建分组
     @Override
     protected List<ExecutionGroup<T>> group(final String dataSourceName, final int connectionOffset, final List<List<ExecutionUnit>> executionUnitGroups,
                                             final ConnectionMode connectionMode) throws SQLException {
+        // 分组结果
         List<ExecutionGroup<T>> result = new LinkedList<>();
+        // 根据模式获取连接
         List<C> connections = databaseConnectionManager.getConnections(dataSourceName, connectionOffset, executionUnitGroups.size(), connectionMode);
         int count = 0;
+        // 循环执行单元
         for (List<ExecutionUnit> each : executionUnitGroups) {
+            // 添加执行分组
             result.add(createExecutionGroup(dataSourceName, each, connections.get(count++), connectionMode));
         }
+        // 回到开始的地方
         return result;
     }
     

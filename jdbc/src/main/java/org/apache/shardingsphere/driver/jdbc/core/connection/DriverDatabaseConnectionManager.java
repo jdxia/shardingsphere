@@ -343,25 +343,30 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
     private List<Connection> getConnections(final String currentDatabaseName, final String dataSourceName, final int connectionOffset, final int connectionSize,
                                             final ConnectionMode connectionMode) throws SQLException {
         String cacheKey = getKey(currentDatabaseName, dataSourceName);
+        //获取DataSource
         DataSource dataSource = databaseName.equals(currentDatabaseName)
                 ? dataSourceMap.get(cacheKey)
                 : contextManager.getStorageUnits(currentDatabaseName).get(dataSourceName).getDataSource();
         Preconditions.checkNotNull(dataSource, "Missing the data source name: '%s'", dataSourceName);
         Collection<Connection> connections;
+        //根据数据源从cachedConnections中获取connections
         synchronized (cachedConnections) {
             connections = cachedConnections.get(cacheKey);
         }
+        //如果connections多于想要的connectionSize，则只获取所需部分
         List<Connection> result;
         int maxConnectionSize = connectionOffset + connectionSize;
         if (connections.size() >= maxConnectionSize) {
             result = new ArrayList<>(connections).subList(connectionOffset, maxConnectionSize);
-        } else if (connections.isEmpty()) {
+        } else if (connections.isEmpty()) { //如果connections不够
+            //创建新的connections, 重点
             Collection<Connection> newConnections = createConnections(currentDatabaseName, dataSourceName, dataSource, maxConnectionSize, connectionMode);
             result = new ArrayList<>(newConnections).subList(connectionOffset, maxConnectionSize);
             synchronized (cachedConnections) {
+                //将新创建的connections也放入缓存中进行管理
                 cachedConnections.putAll(cacheKey, newConnections);
             }
-        } else {
+        } else { //如果缓存中没有对应dataSource的Connections，同样进行创建并放入缓存中
             List<Connection> allConnections = new ArrayList<>(maxConnectionSize);
             allConnections.addAll(connections);
             Collection<Connection> newConnections = createConnections(currentDatabaseName, dataSourceName, dataSource, maxConnectionSize - connections.size(), connectionMode);
@@ -381,6 +386,8 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private List<Connection> createConnections(final String databaseName, final String dataSourceName, final DataSource dataSource, final int connectionSize,
                                                final ConnectionMode connectionMode) throws SQLException {
+        // 这段代码涉及了 ConnectionMode（连接模式）
+
         if (1 == connectionSize) {
             Connection connection = createConnection(databaseName, dataSourceName, dataSource, connectionContext.getTransactionContext());
             methodInvocationRecorder.replay(connection);

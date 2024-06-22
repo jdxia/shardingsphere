@@ -55,7 +55,9 @@ public final class SQLRouteEngine {
      * @return route context
      */
     public RouteContext route(final ConnectionContext connectionContext, final QueryContext queryContext, final RuleMetaData globalRuleMetaData, final ShardingSphereDatabase database) {
+        // 创建路由执行器
         SQLRouteExecutor executor = isNeedAllSchemas(queryContext.getSqlStatementContext().getSqlStatement()) ? new AllSQLRouteExecutor() : new PartialSQLRouteExecutor(rules, props);
+        // 执行器进行路由, org.apache.shardingsphere.infra.route.engine.impl.PartialSQLRouteExecutor.route
         return executor.route(connectionContext, queryContext, globalRuleMetaData, database);
     }
     

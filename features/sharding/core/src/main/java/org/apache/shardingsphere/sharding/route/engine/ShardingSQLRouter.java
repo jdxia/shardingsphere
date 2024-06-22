@@ -52,6 +52,7 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
     public RouteContext createRouteContext(final QueryContext queryContext, final RuleMetaData globalRuleMetaData, final ShardingSphereDatabase database, final ShardingRule rule,
                                            final ConfigurationProperties props, final ConnectionContext connectionContext) {
         if (rule.isShardingCacheEnabled()) {
+            // createRouteContext0 重点是获取路由条件，并执行路由
             Optional<RouteContext> result = new CachedShardingSQLRouter()
                     .loadRouteContext(this::createRouteContext0, queryContext, globalRuleMetaData, database, rule.getShardingCache(), props, connectionContext);
             if (result.isPresent()) {
@@ -63,14 +64,20 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
     
     private RouteContext createRouteContext0(final QueryContext queryContext, final RuleMetaData globalRuleMetaData, final ShardingSphereDatabase database, final ShardingRule rule,
                                              final ConfigurationProperties props, final ConnectionContext connectionContext) {
+        // 获取SQL解析的结果
         SQLStatement sqlStatement = queryContext.getSqlStatementContext().getSqlStatement();
+        // 获取路由条件, createShardingConditions 重点
         ShardingConditions shardingConditions = createShardingConditions(queryContext, globalRuleMetaData, database, rule);
+        // 创建校验器
         Optional<ShardingStatementValidator> validator = ShardingStatementValidatorFactory.newInstance(sqlStatement, shardingConditions, globalRuleMetaData);
+        // 前置校验
         validator.ifPresent(optional -> optional.preValidate(rule, queryContext.getSqlStatementContext(), queryContext.getParameters(), database, props));
         if (sqlStatement instanceof DMLStatement && shardingConditions.isNeedMerge()) {
             shardingConditions.merge();
         }
+        // 执行路由，返回结果, newInstance 重点 sql路由的
         RouteContext result = ShardingRouteEngineFactory.newInstance(rule, database, queryContext, shardingConditions, props, connectionContext, globalRuleMetaData).route(rule);
+        // 后置校验
         validator.ifPresent(optional -> optional.postValidate(rule, queryContext.getSqlStatementContext(), queryContext.getHintValueContext(), queryContext.getParameters(), database, props, result));
         return result;
     }
@@ -78,11 +85,13 @@ public final class ShardingSQLRouter implements SQLRouter<ShardingRule> {
     private ShardingConditions createShardingConditions(final QueryContext queryContext,
                                                         final RuleMetaData globalRuleMetaData, final ShardingSphereDatabase database, final ShardingRule rule) {
         List<ShardingCondition> shardingConditions;
+        // 不是 DML 也是不 CURSOR 操作，这直接返回空
         if (queryContext.getSqlStatementContext().getSqlStatement() instanceof DMLStatement || queryContext.getSqlStatementContext() instanceof CursorAvailable) {
             shardingConditions = new ShardingConditionEngine(globalRuleMetaData, database, rule).createShardingConditions(queryContext.getSqlStatementContext(), queryContext.getParameters());
         } else {
             shardingConditions = Collections.emptyList();
         }
+        // 返回, 回到开始地方
         return new ShardingConditions(shardingConditions, queryContext.getSqlStatementContext(), rule);
     }
     

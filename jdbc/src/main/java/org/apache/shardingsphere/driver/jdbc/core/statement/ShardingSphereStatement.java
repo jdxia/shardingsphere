@@ -86,16 +86,14 @@ import org.apache.shardingsphere.traffic.rule.TrafficRule;
 import org.apache.shardingsphere.transaction.implicit.ImplicitTransactionCallback;
 import org.apache.shardingsphere.transaction.util.AutoCommitUtils;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -179,6 +177,8 @@ public final class ShardingSphereStatement extends AbstractStatementAdapter {
             if (useFederation) {
                 return executeFederationQuery(queryContext);
             }
+
+            // 里面有sql审计
             executionContext = createExecutionContext(queryContext);
             result = doExecuteQuery(executionContext);
             // CHECKSTYLE:OFF
@@ -507,8 +507,13 @@ public final class ShardingSphereStatement extends AbstractStatementAdapter {
     
     private QueryContext createQueryContext(final String originSQL) {
         SQLParserRule sqlParserRule = metaDataContexts.getMetaData().getGlobalRuleMetaData().getSingleRule(SQLParserRule.class);
+
         String sql = SQLHintUtils.removeHint(originSQL);
         HintValueContext hintValueContext = SQLHintUtils.extractHint(originSQL);
+
+        /**
+         * org.apache.shardingsphere.infra.parser.ShardingSphereSQLParserEngine#parse(java.lang.String, boolean)
+         */
         SQLStatement sqlStatement = sqlParserRule.getSQLParserEngine(metaDataContexts.getMetaData().getDatabase(databaseName).getProtocolType()).parse(sql, false);
         SQLStatementContext sqlStatementContext = new SQLBindEngine(metaDataContexts.getMetaData(), databaseName, hintValueContext).bind(sqlStatement, Collections.emptyList());
         return new QueryContext(sqlStatementContext, sql, Collections.emptyList(), hintValueContext);
@@ -518,6 +523,7 @@ public final class ShardingSphereStatement extends AbstractStatementAdapter {
         clearStatements();
         RuleMetaData globalRuleMetaData = metaDataContexts.getMetaData().getGlobalRuleMetaData();
         ShardingSphereDatabase currentDatabase = metaDataContexts.getMetaData().getDatabase(databaseName);
+        // sql审计
         SQLAuditEngine.audit(queryContext.getSqlStatementContext(), queryContext.getParameters(), globalRuleMetaData, currentDatabase, null, queryContext.getHintValueContext());
         return kernelProcessor.generateExecutionContext(queryContext, currentDatabase, globalRuleMetaData, metaDataContexts.getMetaData().getProps(),
                 connection.getDatabaseConnectionManager().getConnectionContext());

@@ -63,12 +63,21 @@ public abstract class AbstractExecutionPrepareEngine<T> implements ExecutionPrep
     public final ExecutionGroupContext<T> prepare(final RouteContext routeContext, final Map<String, Integer> connectionOffsets, final Collection<ExecutionUnit> executionUnits,
                                                   final ExecutionGroupReportContext reportContext) throws SQLException {
         Collection<ExecutionGroup<T>> result = new LinkedList<>();
+        // 结果集分组
+        // 循环所有执行单元
         for (Entry<String, List<ExecutionUnit>> entry : aggregateExecutionUnitGroups(executionUnits).entrySet()) {
+            // 数据源
             String dataSourceName = entry.getKey();
+            // 执行单元
             List<List<ExecutionUnit>> executionUnitGroups = group(entry.getValue());
+            // 计算连接模式
             ConnectionMode connectionMode = maxConnectionsSizePerQuery < entry.getValue().size() ? ConnectionMode.CONNECTION_STRICTLY : ConnectionMode.MEMORY_STRICTLY;
+            // group 进行分组,
+            // 重点 group分组方法中，根据模式获取连接，并创建分组, org.apache.shardingsphere.infra.executor.sql.prepare.driver.DriverExecutionPrepareEngine.group
+            // 添加分组结果
             result.addAll(group(dataSourceName, connectionOffsets.getOrDefault(dataSourceName, 0), executionUnitGroups, connectionMode));
         }
+        // 装饰处理, 回到一开始地方
         return decorate(routeContext, result, reportContext);
     }
     
