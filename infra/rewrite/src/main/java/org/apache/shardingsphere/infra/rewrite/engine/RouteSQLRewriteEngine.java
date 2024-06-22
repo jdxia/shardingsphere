@@ -58,7 +58,8 @@ public final class RouteSQLRewriteEngine {
     private final ShardingSphereDatabase database;
     
     private final RuleMetaData globalRuleMetaData;
-    
+
+    //会对路由单元按照数据源进行分组, 接着循环所有分组后的路由单元，并创建改写单元
     /**
      * Rewrite SQL and parameters.
      *
@@ -72,6 +73,7 @@ public final class RouteSQLRewriteEngine {
         for (Entry<String, Collection<RouteUnit>> entry : aggregateRouteUnitGroups(routeContext.getRouteUnits()).entrySet()) {
             Collection<RouteUnit> routeUnits = entry.getValue();
             if (isNeedAggregateRewrite(sqlRewriteContext.getSqlStatementContext(), routeUnits)) {
+                // createSQLRewriteUnit 重点, 执行改写逻辑
                 sqlRewriteUnits.put(routeUnits.iterator().next(), createSQLRewriteUnit(sqlRewriteContext, routeContext, routeUnits));
             } else {
                 addSQLRewriteUnits(sqlRewriteUnits, sqlRewriteContext, routeContext, routeUnits);
@@ -81,17 +83,26 @@ public final class RouteSQLRewriteEngine {
     }
     
     private SQLRewriteUnit createSQLRewriteUnit(final SQLRewriteContext sqlRewriteContext, final RouteContext routeContext, final Collection<RouteUnit> routeUnits) {
+        // 所有的SQL
         Collection<String> sql = new LinkedList<>();
+        // 参数
         List<Object> params = new LinkedList<>();
+        // 事都是查询操作，并且包含 $ 符号
         boolean containsDollarMarker = sqlRewriteContext.getSqlStatementContext() instanceof SelectStatementContext
                 && ((SelectStatementContext) (sqlRewriteContext.getSqlStatementContext())).isContainsDollarParameterMarker();
+        // 循环当前路由分组中的所有路由
         for (RouteUnit each : routeUnits) {
+            // 改写处理
+            // 循环当前路由分组中的所有路由时，会创建 RouteSQLBuilder 并执行 toSQL 方法, 将逻辑SQL中的表名改写为当前路由中的真实表名：
+            // toSQL看下
             sql.add(SQLUtils.trimSemicolon(new RouteSQLBuilder(sqlRewriteContext, each).toSQL()));
             if (containsDollarMarker && !params.isEmpty()) {
                 continue;
             }
+            // 添加参数
             params.addAll(getParameters(sqlRewriteContext.getParameterBuilder(), routeContext, each));
         }
+        // 使用 UNION ALL 连接所有SQL, 生成了真实改写单元，包含了可执行的真实SQL
         return new SQLRewriteUnit(String.join(" UNION ALL ", sql), params);
     }
     

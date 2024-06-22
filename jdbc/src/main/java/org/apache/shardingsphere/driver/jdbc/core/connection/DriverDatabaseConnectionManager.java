@@ -64,34 +64,40 @@ import java.util.Random;
  * Database connection manager of ShardingSphere-JDBC.
  */
 public final class DriverDatabaseConnectionManager implements OnlineDatabaseConnectionManager<Connection>, AutoCloseable {
-    
+
     private final Map<String, DataSource> dataSourceMap = new LinkedHashMap<>();
-    
+
     private final Map<String, DataSource> physicalDataSourceMap = new LinkedHashMap<>();
-    
+
     private final Map<String, DataSource> trafficDataSourceMap = new LinkedHashMap<>();
-    
+
     @Getter
     private final ConnectionTransaction connectionTransaction;
-    
+
     private final Multimap<String, Connection> cachedConnections = LinkedHashMultimap.create();
-    
+
     private final MethodInvocationRecorder<Connection> methodInvocationRecorder = new MethodInvocationRecorder<>();
-    
+
     private final ForceExecuteTemplate<Connection> forceExecuteTemplate = new ForceExecuteTemplate<>();
-    
+
     private final Random random = new SecureRandom();
-    
+
     @Getter
     private final ConnectionContext connectionContext;
-    
+
     private final ContextManager contextManager;
-    
+
     private final String databaseName;
-    
+
     public DriverDatabaseConnectionManager(final String databaseName, final ContextManager contextManager) {
+        /**
+         * databaseName 是 logic_db
+         *
+         * contextManager.getStorageUnits(databaseName) 拿到的都是物理数据源
+         */
         for (Entry<String, StorageUnit> entry : contextManager.getStorageUnits(databaseName).entrySet()) {
             DataSource dataSource = entry.getValue().getDataSource();
+            // cacheKey 是 logic_db.db0
             String cacheKey = getKey(databaseName, entry.getKey());
             dataSourceMap.put(cacheKey, dataSource);
             physicalDataSourceMap.put(cacheKey, dataSource);
@@ -107,7 +113,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         this.contextManager = contextManager;
         this.databaseName = databaseName;
     }
-    
+
     private Map<String, DataSource> getTrafficDataSourceMap(final String databaseName, final ContextManager contextManager) {
         TrafficRule rule = contextManager.getMetaDataContexts().getMetaData().getGlobalRuleMetaData().getSingleRule(TrafficRule.class);
         if (rule.getStrategyRules().isEmpty()) {
@@ -123,7 +129,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         Collection<InstanceMetaData> instances = contextManager.getInstanceContext().getAllClusterInstances(InstanceType.PROXY, rule.getLabels()).values();
         return DataSourcePoolCreator.create(createDataSourcePoolPropertiesMap(instances, users, propsSample, actualDatabaseName), true);
     }
-    
+
     private Map<String, DataSourcePoolProperties> createDataSourcePoolPropertiesMap(final Collection<InstanceMetaData> instances, final Collection<ShardingSphereUser> users,
                                                                                     final DataSourcePoolProperties propsSample, final String schema) {
         Map<String, DataSourcePoolProperties> result = new LinkedHashMap<>();
@@ -132,7 +138,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         }
         return result;
     }
-    
+
     private DataSourcePoolProperties createDataSourcePoolProperties(final ProxyInstanceMetaData instanceMetaData, final Collection<ShardingSphereUser> users,
                                                                     final DataSourcePoolProperties propsSample, final String schema) {
         Map<String, Object> props = propsSample.getAllLocalProperties();
@@ -142,19 +148,19 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         props.put("password", user.getPassword());
         return new DataSourcePoolProperties("com.zaxxer.hikari.HikariDataSource", props);
     }
-    
+
     private String createJdbcUrl(final ProxyInstanceMetaData instanceMetaData, final String schema, final Map<String, Object> props) {
         String jdbcUrl = String.valueOf(props.get("jdbcUrl"));
         String jdbcUrlPrefix = jdbcUrl.substring(0, jdbcUrl.indexOf("//"));
         String jdbcUrlSuffix = jdbcUrl.contains("?") ? jdbcUrl.substring(jdbcUrl.indexOf('?')) : "";
         return String.format("%s//%s:%s/%s%s", jdbcUrlPrefix, instanceMetaData.getIp(), instanceMetaData.getPort(), schema, jdbcUrlSuffix);
     }
-    
+
     private ConnectionTransaction createConnectionTransaction(final ContextManager contextManager) {
         TransactionRule rule = contextManager.getMetaDataContexts().getMetaData().getGlobalRuleMetaData().getSingleRule(TransactionRule.class);
         return new ConnectionTransaction(rule);
     }
-    
+
     /**
      * Set auto commit.
      *
@@ -165,7 +171,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         methodInvocationRecorder.record("setAutoCommit", target -> target.setAutoCommit(autoCommit));
         forceExecuteTemplate.execute(cachedConnections.values(), connection -> connection.setAutoCommit(autoCommit));
     }
-    
+
     /**
      * Commit.
      *
@@ -186,7 +192,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
             }
         }
     }
-    
+
     /**
      * Rollback.
      *
@@ -205,7 +211,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
             }
         }
     }
-    
+
     /**
      * Rollback to savepoint.
      *
@@ -217,7 +223,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
             ConnectionSavepointManager.getInstance().rollbackToSavepoint(each, savepoint.getSavepointName());
         }
     }
-    
+
     /**
      * Set savepoint.
      *
@@ -233,7 +239,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         methodInvocationRecorder.record("setSavepoint", target -> ConnectionSavepointManager.getInstance().setSavepoint(target, savepointName));
         return result;
     }
-    
+
     /**
      * Set savepoint.
      *
@@ -248,7 +254,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         methodInvocationRecorder.record("setSavepoint", target -> ConnectionSavepointManager.getInstance().setSavepoint(target, result.getSavepointName()));
         return result;
     }
-    
+
     /**
      * Release savepoint.
      *
@@ -260,7 +266,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
             ConnectionSavepointManager.getInstance().releaseSavepoint(each, savepoint.getSavepointName());
         }
     }
-    
+
     /**
      * Get transaction isolation.
      *
@@ -270,7 +276,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
     public Optional<Integer> getTransactionIsolation() throws SQLException {
         return cachedConnections.values().isEmpty() ? Optional.empty() : Optional.of(cachedConnections.values().iterator().next().getTransactionIsolation());
     }
-    
+
     /**
      * Set transaction isolation.
      *
@@ -281,7 +287,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         methodInvocationRecorder.record("setTransactionIsolation", connection -> connection.setTransactionIsolation(level));
         forceExecuteTemplate.execute(cachedConnections.values(), connection -> connection.setTransactionIsolation(level));
     }
-    
+
     /**
      * Set read only.
      *
@@ -292,7 +298,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         methodInvocationRecorder.record("setReadOnly", connection -> connection.setReadOnly(readOnly));
         forceExecuteTemplate.execute(cachedConnections.values(), connection -> connection.setReadOnly(readOnly));
     }
-    
+
     /**
      * Whether connection valid.
      *
@@ -308,7 +314,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         }
         return true;
     }
-    
+
     /**
      * Get random physical data source name.
      *
@@ -317,13 +323,13 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
     public String getRandomPhysicalDataSourceName() {
         return getRandomPhysicalDatabaseAndDataSourceName()[1];
     }
-    
+
     private String[] getRandomPhysicalDatabaseAndDataSourceName() {
         Collection<String> cachedPhysicalDataSourceNames = Sets.intersection(physicalDataSourceMap.keySet(), cachedConnections.keySet());
         Collection<String> databaseAndDatasourceNames = cachedPhysicalDataSourceNames.isEmpty() ? physicalDataSourceMap.keySet() : cachedPhysicalDataSourceNames;
         return new ArrayList<>(databaseAndDatasourceNames).get(random.nextInt(databaseAndDatasourceNames.size())).split("\\.");
     }
-    
+
     /**
      * Get random connection.
      *
@@ -334,34 +340,39 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         String[] databaseAndDataSourceName = getRandomPhysicalDatabaseAndDataSourceName();
         return getConnections(databaseAndDataSourceName[0], databaseAndDataSourceName[1], 0, 1, ConnectionMode.MEMORY_STRICTLY).get(0);
     }
-    
+
     @Override
     public List<Connection> getConnections(final String dataSourceName, final int connectionOffset, final int connectionSize, final ConnectionMode connectionMode) throws SQLException {
         return getConnections(connectionContext.getDatabaseName().orElse(databaseName), dataSourceName, connectionOffset, connectionSize, connectionMode);
     }
-    
+
     private List<Connection> getConnections(final String currentDatabaseName, final String dataSourceName, final int connectionOffset, final int connectionSize,
                                             final ConnectionMode connectionMode) throws SQLException {
         String cacheKey = getKey(currentDatabaseName, dataSourceName);
+        //获取DataSource
         DataSource dataSource = databaseName.equals(currentDatabaseName)
                 ? dataSourceMap.get(cacheKey)
                 : contextManager.getStorageUnits(currentDatabaseName).get(dataSourceName).getDataSource();
         Preconditions.checkNotNull(dataSource, "Missing the data source name: '%s'", dataSourceName);
         Collection<Connection> connections;
+        //根据数据源从cachedConnections中获取connections
         synchronized (cachedConnections) {
             connections = cachedConnections.get(cacheKey);
         }
+        //如果connections多于想要的connectionSize，则只获取所需部分
         List<Connection> result;
         int maxConnectionSize = connectionOffset + connectionSize;
         if (connections.size() >= maxConnectionSize) {
             result = new ArrayList<>(connections).subList(connectionOffset, maxConnectionSize);
-        } else if (connections.isEmpty()) {
+        } else if (connections.isEmpty()) { //如果connections不够
+            //创建新的connections, 重点
             Collection<Connection> newConnections = createConnections(currentDatabaseName, dataSourceName, dataSource, maxConnectionSize, connectionMode);
             result = new ArrayList<>(newConnections).subList(connectionOffset, maxConnectionSize);
             synchronized (cachedConnections) {
+                //将新创建的connections也放入缓存中进行管理
                 cachedConnections.putAll(cacheKey, newConnections);
             }
-        } else {
+        } else { //如果缓存中没有对应dataSource的Connections，同样进行创建并放入缓存中
             List<Connection> allConnections = new ArrayList<>(maxConnectionSize);
             allConnections.addAll(connections);
             Collection<Connection> newConnections = createConnections(currentDatabaseName, dataSourceName, dataSource, maxConnectionSize - connections.size(), connectionMode);
@@ -373,14 +384,16 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         }
         return result;
     }
-    
+
     private String getKey(final String databaseName, final String dataSourceName) {
         return databaseName.toLowerCase() + "." + dataSourceName;
     }
-    
+
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private List<Connection> createConnections(final String databaseName, final String dataSourceName, final DataSource dataSource, final int connectionSize,
                                                final ConnectionMode connectionMode) throws SQLException {
+        // 这段代码涉及了 ConnectionMode（连接模式）
+
         if (1 == connectionSize) {
             Connection connection = createConnection(databaseName, dataSourceName, dataSource, connectionContext.getTransactionContext());
             methodInvocationRecorder.replay(connection);
@@ -393,7 +406,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
             return createConnections(databaseName, dataSourceName, dataSource, connectionSize, connectionContext.getTransactionContext());
         }
     }
-    
+
     private List<Connection> createConnections(final String databaseName, final String dataSourceName, final DataSource dataSource, final int connectionSize,
                                                final TransactionConnectionContext transactionConnectionContext) throws SQLException {
         List<Connection> result = new ArrayList<>(connectionSize);
@@ -411,18 +424,18 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         }
         return result;
     }
-    
+
     private Connection createConnection(final String databaseName, final String dataSourceName, final DataSource dataSource,
                                         final TransactionConnectionContext transactionConnectionContext) throws SQLException {
         Optional<Connection> connectionInTransaction =
                 isRawJdbcDataSource(databaseName, dataSourceName) ? connectionTransaction.getConnection(databaseName, dataSourceName, transactionConnectionContext) : Optional.empty();
         return connectionInTransaction.isPresent() ? connectionInTransaction.get() : dataSource.getConnection();
     }
-    
+
     private boolean isRawJdbcDataSource(final String databaseName, final String dataSourceName) {
         return !trafficDataSourceMap.containsKey(getKey(databaseName, dataSourceName));
     }
-    
+
     @Override
     public void close() throws SQLException {
         try {

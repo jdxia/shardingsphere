@@ -91,6 +91,7 @@ public final class ShardingSphereConnection extends AbstractConnectionAdapter {
     
     @Override
     public PreparedStatement prepareStatement(final String sql) throws SQLException {
+        // 创建 ShardingSpherePreparedStatement
         return new ShardingSpherePreparedStatement(this, sql);
     }
     

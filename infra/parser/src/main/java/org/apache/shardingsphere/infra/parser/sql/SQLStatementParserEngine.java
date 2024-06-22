@@ -28,24 +28,24 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
  * SQL statement parser engine.
  */
 public final class SQLStatementParserEngine {
-    
+
     private final SQLStatementParserExecutor sqlStatementParserExecutor;
-    
+
     private final LoadingCache<String, SQLStatement> sqlStatementCache;
-    
+
     @Getter
     private final CacheOption sqlStatementCacheOption;
-    
+
     @Getter
     private final CacheOption parseTreeCacheOption;
-    
+
     public SQLStatementParserEngine(final DatabaseType databaseType, final CacheOption sqlStatementCacheOption, final CacheOption parseTreeCacheOption) {
         sqlStatementParserExecutor = new SQLStatementParserExecutor(databaseType, parseTreeCacheOption);
         sqlStatementCache = SQLStatementCacheBuilder.build(databaseType, sqlStatementCacheOption, parseTreeCacheOption);
         this.sqlStatementCacheOption = sqlStatementCacheOption;
         this.parseTreeCacheOption = parseTreeCacheOption;
     }
-    
+
     /**
      * Parse to SQL statement.
      *
@@ -54,6 +54,11 @@ public final class SQLStatementParserEngine {
      * @return SQL statement
      */
     public SQLStatement parse(final String sql, final boolean useCache) {
+        /**
+         * useCache 是 true
+         * sqlStatementCache 是 上面的 SQLStatementCacheBuilder.build(databaseType, sqlStatementCacheOption, parseTreeCacheOption);
+         * 实际走的是 {@link SQLStatementParserExecutor#parse(String)}
+         */
         return useCache ? sqlStatementCache.get(sql) : sqlStatementParserExecutor.parse(sql);
     }
 }

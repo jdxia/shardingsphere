@@ -29,8 +29,10 @@ import java.util.Collection;
 @Getter
 @Setter
 public final class YamlShardingAuditStrategyConfiguration implements YamlConfiguration {
-    
+
+    // 多个审计算法名称，支持同时使用多个审计
     private Collection<String> auditorNames;
-    
+
+    // 否允许用户通过 Hint 的形式跳过分片审计，该参数默认是 true，即允许。
     private boolean allowHintDisable = true;
 }

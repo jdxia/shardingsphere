@@ -74,6 +74,7 @@ public final class ExecutorEngine implements AutoCloseable {
         if (executionGroupContext.getInputGroups().isEmpty()) {
             return Collections.emptyList();
         }
+        // parallelExecute  首先将JDBCExecutorCallback放入到线程池，然后执行
         return serial ? serialExecute(executionGroupContext.getInputGroups().iterator(), executionGroupContext.getReportContext().getProcessId(), firstCallback, callback)
                 : parallelExecute(executionGroupContext.getInputGroups().iterator(), executionGroupContext.getReportContext().getProcessId(), firstCallback, callback);
     }
@@ -91,7 +92,9 @@ public final class ExecutorEngine implements AutoCloseable {
     private <I, O> List<O> parallelExecute(final Iterator<ExecutionGroup<I>> executionGroups, final String processId, final ExecutorCallback<I, O> firstCallback,
                                            final ExecutorCallback<I, O> callback) throws SQLException {
         ExecutionGroup<I> firstInputs = executionGroups.next();
+        // 线城池添加 JDBCExecutorCallback
         Collection<Future<Collection<O>>> restResultFutures = asyncExecute(executionGroups, processId, callback);
+        // 异步执行
         return getGroupResults(syncExecute(firstInputs, processId, null == firstCallback ? callback : firstCallback), restResultFutures);
     }
     

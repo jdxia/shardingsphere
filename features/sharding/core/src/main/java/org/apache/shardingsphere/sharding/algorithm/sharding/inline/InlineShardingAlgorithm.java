@@ -66,8 +66,11 @@ public final class InlineShardingAlgorithm implements StandardShardingAlgorithm<
     
     @Override
     public String doSharding(final Collection<String> availableTargetNames, final PreciseShardingValue<Comparable<?>> shardingValue) {
+        // 检查分片键的值是否为空
         ShardingSpherePreconditions.checkNotNull(shardingValue.getValue(), NullShardingValueException::new);
+        // 分片键名称：id
         String columnName = shardingValue.getColumnName();
+        // 表达式是否包含分片键：ds_order_${id % 2} 是否包含 id
         ShardingSpherePreconditions.checkState(algorithmExpression.contains(columnName), () -> new MismatchedInlineShardingAlgorithmExpressionAndColumnException(algorithmExpression, columnName));
         Map<String, Comparable<?>> map = new LinkedHashMap<>();
         map.put(columnName, shardingValue.getValue());

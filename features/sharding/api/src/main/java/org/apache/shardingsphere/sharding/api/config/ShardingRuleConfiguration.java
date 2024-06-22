@@ -41,17 +41,22 @@ import java.util.Map;
 @Getter
 @Setter
 public final class ShardingRuleConfiguration implements DatabaseRuleConfiguration, DistributedRuleConfiguration {
-    
+
+    //表分片规则列表
     private Collection<ShardingTableRuleConfiguration> tables = new LinkedList<>();
     
     private Collection<ShardingAutoTableRuleConfiguration> autoTables = new LinkedList<>();
-    
+
+    //绑定表规则列表
     private Collection<ShardingTableReferenceRuleConfiguration> bindingTableGroups = new LinkedList<>();
-    
+
+    //默认分库策略
     private ShardingStrategyConfiguration defaultDatabaseShardingStrategy;
-    
+
+    //默认分表策略
     private ShardingStrategyConfiguration defaultTableShardingStrategy;
-    
+
+    //默认自增列值生成器
     private KeyGenerateStrategyConfiguration defaultKeyGenerateStrategy;
     
     private ShardingAuditStrategyConfiguration defaultAuditStrategy;

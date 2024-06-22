@@ -77,13 +77,17 @@ public abstract class JDBCExecutorCallback<T> implements ExecutorCallback<JDBCEx
     private T execute(final JDBCExecutionUnit jdbcExecutionUnit, final boolean isTrunkThread, final String processId) throws SQLException {
         SQLExecutorExceptionHandler.setExceptionThrown(isExceptionThrown);
         DatabaseType storageType = resourceMetaData.getStorageUnits().get(jdbcExecutionUnit.getExecutionUnit().getDataSourceName()).getStorageType();
+        // 数据源元数据
         ConnectionProperties connectionProps = resourceMetaData.getStorageUnits().get(jdbcExecutionUnit.getExecutionUnit().getDataSourceName()).getConnectionProperties();
         SQLExecutionHook sqlExecutionHook = new SPISQLExecutionHook();
         try {
+            // 真实SQL
             SQLUnit sqlUnit = jdbcExecutionUnit.getExecutionUnit().getSqlUnit();
             sqlExecutionHook.start(jdbcExecutionUnit.getExecutionUnit().getDataSourceName(), sqlUnit.getSql(), sqlUnit.getParameters(), connectionProps, isTrunkThread);
+            // 真正的执行，调用数据库连接
             T result = executeSQL(sqlUnit.getSql(), jdbcExecutionUnit.getStorageResource(), jdbcExecutionUnit.getConnectionMode(), storageType);
             sqlExecutionHook.finishSuccess();
+            // 完成执行
             processEngine.completeSQLUnitExecution(jdbcExecutionUnit, processId);
             return result;
         } catch (final SQLException ex) {

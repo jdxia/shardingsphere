@@ -732,7 +732,8 @@
                         <execution>
                             <id>attach-sources</id>
                             <goals>
-                                <goal>jar-no-fork</goal>
+                                <goal>jar</goal>
+                                <goal>test-jar</goal> <!-- 生成包含测试源码的 jar 包 -->
                             </goals>
                             <phase>verify</phase>
                         </execution>
@@ -741,9 +742,18 @@
                 <plugin>
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>${maven-deploy-plugin.version}</version>
-                    <configuration>
-                        <skip>${maven.deploy.skip}</skip>
-                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>default-deploy</id>
+                            <goals>
+                                <goal>deploy</goal>
+                            </goals>
+                            <phase>deploy</phase>
+                            <configuration>
+                                <skip>${maven.deploy.skip}</skip>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <artifactId>maven-release-plugin</artifactId>
@@ -938,13 +948,6 @@
         <url>https://github.com/apache/shardingsphere.git</url>
         <tag>5.5.0</tag>
     </scm>
-    
-    <distributionManagement>
-        <site>
-            <id>Apache ShardingSphere</id>
-            <url>https://shardingsphere.apache.org/statistics</url>
-        </site>
-    </distributionManagement>
     
     <profiles>
         <profile>

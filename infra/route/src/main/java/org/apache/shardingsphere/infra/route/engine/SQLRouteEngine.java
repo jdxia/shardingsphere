@@ -40,11 +40,11 @@ import java.util.Collection;
 @HighFrequencyInvocation
 @RequiredArgsConstructor
 public final class SQLRouteEngine {
-    
+
     private final Collection<ShardingSphereRule> rules;
-    
+
     private final ConfigurationProperties props;
-    
+
     /**
      * Route SQL.
      *
@@ -55,10 +55,16 @@ public final class SQLRouteEngine {
      * @return route context
      */
     public RouteContext route(final ConnectionContext connectionContext, final QueryContext queryContext, final RuleMetaData globalRuleMetaData, final ShardingSphereDatabase database) {
+        // 创建路由执行器
         SQLRouteExecutor executor = isNeedAllSchemas(queryContext.getSqlStatementContext().getSqlStatement()) ? new AllSQLRouteExecutor() : new PartialSQLRouteExecutor(rules, props);
+
+        /**
+         * 执行器进行路由
+         * {@link PartialSQLRouteExecutor#route(ConnectionContext, QueryContext, RuleMetaData, ShardingSphereDatabase)}
+         */
         return executor.route(connectionContext, queryContext, globalRuleMetaData, database);
     }
-    
+
     // TODO use dynamic config to judge unconfigured schema
     private boolean isNeedAllSchemas(final SQLStatement sqlStatement) {
         return sqlStatement instanceof MySQLShowTablesStatement || sqlStatement instanceof MySQLShowTableStatusStatement;

@@ -27,16 +27,16 @@ import org.apache.shardingsphere.sql.parser.sql.common.statement.SQLStatement;
  * SQL statement parser executor.
  */
 public final class SQLStatementParserExecutor {
-    
+
     private final SQLParserEngine parserEngine;
-    
+
     private final SQLStatementVisitorEngine visitorEngine;
-    
+
     public SQLStatementParserExecutor(final DatabaseType databaseType, final CacheOption parseTreeCacheOption) {
         parserEngine = new SQLParserEngine(databaseType, parseTreeCacheOption);
         visitorEngine = new SQLStatementVisitorEngine(databaseType);
     }
-    
+
     /**
      * Parse to SQL statement.
      *
@@ -44,6 +44,10 @@ public final class SQLStatementParserExecutor {
      * @return SQL statement
      */
     public SQLStatement parse(final String sql) {
+        /**
+         * 调用Visitor引擎（语法树访问器）将语法树遍历并构造SQLStatement域模型
+         * ShardingSphere后续会根据域模型提炼分片所需的上下文，并标记有可能需要改写的位置
+         */
         return visitorEngine.visit(parserEngine.parse(sql, false));
     }
 }

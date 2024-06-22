@@ -43,24 +43,24 @@ import java.util.Optional;
  * Driver JDBC executor.
  */
 public final class DriverJDBCExecutor {
-    
+
     private final String databaseName;
-    
+
     private final MetaDataContexts metaDataContexts;
-    
+
     private final ModeContextManager modeContextManager;
-    
+
     private final JDBCExecutor jdbcExecutor;
-    
+
     private final ProcessEngine processEngine = new ProcessEngine();
-    
+
     public DriverJDBCExecutor(final String databaseName, final ContextManager contextManager, final JDBCExecutor jdbcExecutor) {
         this.databaseName = databaseName;
         this.jdbcExecutor = jdbcExecutor;
         metaDataContexts = contextManager.getMetaDataContexts();
         modeContextManager = contextManager.getInstanceContext().getModeContextManager();
     }
-    
+
     /**
      * Execute query.
      *
@@ -73,13 +73,18 @@ public final class DriverJDBCExecutor {
     public List<QueryResult> executeQuery(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext,
                                           final QueryContext queryContext, final ExecuteQueryCallback callback) throws SQLException {
         try {
+            // 执行 SQL
             processEngine.executeSQL(executionGroupContext, queryContext);
+
+            // 执行
             return jdbcExecutor.execute(executionGroupContext, callback);
         } finally {
+
+            // 完成执行
             processEngine.completeSQLExecution(executionGroupContext.getReportContext().getProcessId());
         }
     }
-    
+
     /**
      * Execute update.
      *
@@ -103,7 +108,7 @@ public final class DriverJDBCExecutor {
             processEngine.completeSQLExecution(executionGroupContext.getReportContext().getProcessId());
         }
     }
-    
+
     private boolean isNeedAccumulate(final Collection<ShardingSphereRule> rules, final SQLStatementContext sqlStatementContext) {
         for (ShardingSphereRule each : rules) {
             Optional<DataNodeRuleAttribute> ruleAttribute = each.getAttributes().findAttribute(DataNodeRuleAttribute.class);
@@ -113,7 +118,7 @@ public final class DriverJDBCExecutor {
         }
         return false;
     }
-    
+
     private int accumulate(final List<Integer> updateResults) {
         int result = 0;
         for (Integer each : updateResults) {
@@ -121,7 +126,7 @@ public final class DriverJDBCExecutor {
         }
         return result;
     }
-    
+
     /**
      * Execute SQL.
      *
@@ -135,17 +140,22 @@ public final class DriverJDBCExecutor {
     public boolean execute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext, final QueryContext queryContext,
                            final Collection<RouteUnit> routeUnits, final JDBCExecutorCallback<Boolean> callback) throws SQLException {
         try {
+            // 执行 SQL, executeSQL方法中并没有真正的执行，只是在进程注册器中，添加了一个进程Process
             processEngine.executeSQL(executionGroupContext, queryContext);
+            // 执行
             List<Boolean> results = doExecute(executionGroupContext, queryContext.getSqlStatementContext(), routeUnits, callback);
             return null != results && !results.isEmpty() && null != results.get(0) && results.get(0);
         } finally {
+            // 完成执行
             processEngine.completeSQLExecution(executionGroupContext.getReportContext().getProcessId());
         }
     }
-    
+
     private <T> List<T> doExecute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext, final SQLStatementContext sqlStatementContext, final Collection<RouteUnit> routeUnits,
                                   final JDBCExecutorCallback<T> callback) throws SQLException {
+        // 执行
         List<T> results = jdbcExecutor.execute(executionGroupContext, callback);
+        // 刷新元数据
         new MetaDataRefreshEngine(modeContextManager,
                 metaDataContexts.getMetaData().getDatabase(sqlStatementContext.getTablesContext().getDatabaseName().orElse(databaseName)), metaDataContexts.getMetaData().getProps())
                         .refresh(sqlStatementContext, routeUnits);

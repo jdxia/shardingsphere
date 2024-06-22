@@ -31,15 +31,20 @@ import org.apache.shardingsphere.sharding.api.config.strategy.sharding.ShardingS
 @Getter
 @Setter
 public final class ShardingTableRuleConfiguration {
-    
+
+    //逻辑表
     private final String logicTable;
-    
+
+    //真实数据节点
     private final String actualDataNodes;
-    
+
+    //分库策略
     private ShardingStrategyConfiguration databaseShardingStrategy;
-    
+
+    //分表策略
     private ShardingStrategyConfiguration tableShardingStrategy;
-    
+
+    //自增列生成器
     private KeyGenerateStrategyConfiguration keyGenerateStrategy;
     
     private ShardingAuditStrategyConfiguration auditStrategy;

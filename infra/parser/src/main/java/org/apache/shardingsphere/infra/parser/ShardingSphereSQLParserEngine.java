@@ -50,6 +50,7 @@ public final class ShardingSphereSQLParserEngine implements SQLParserEngine {
     @Override
     public SQLStatement parse(final String sql, final boolean useCache) {
         try {
+            // 核心, 解析出sql是什么类型
             return sqlStatementParserEngine.parse(sql, useCache);
         } catch (final SQLParsingException | ParseCancellationException originalEx) {
             try {

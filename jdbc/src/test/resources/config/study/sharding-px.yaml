@@ -1,0 +1,127 @@
+dataSources:
+  pxb7_dev:
+    url: jdbc:mysql://172.30.98.50:3311/pxb7_trade?useUnicode=true&characterEncoding=utf8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&serverTimezone=GMT%2B8
+    username: pxb7_test2
+    password: pxb7_test2#aCNBbsvj
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 4
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 3000
+    keepAliveTime: 30000
+    poolName: HikariPool-pxb7_trade
+  db0:
+    url: jdbc:mysql://172.30.98.50:3311/pxb7_trade_01?useUnicode=true&characterEncoding=utf8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&serverTimezone=GMT%2B8
+    username: pxb7_test2
+    password: pxb7_test2#aCNBbsvj
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 50
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 3000
+    keepAliveTime: 30000
+    poolName: db0
+  db1:
+    url: jdbc:mysql://172.30.98.50:3311/pxb7_trade_02?useUnicode=true&characterEncoding=utf8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&allowMultiQueries=true&serverTimezone=GMT%2B8
+    username: pxb7_test2
+    password: pxb7_test2#aCNBbsvj
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 50
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 3000
+    keepAliveTime: 30000
+    poolName: db1
+
+
+mode:
+  type: Standalone
+
+
+rules:
+  - !SINGLE
+    tables:
+      - "pxb7_dev.*"
+    defaultDataSource: pxb7_dev # 默认数据源，仅在执行 CREATE TABLE 创建单表时有效。缺失值为空，表示随机单播路由。
+#   - !READWRITE_SPLITTING
+#     dataSources:
+#       readwrite_ds0:
+#         writeDataSourceName: db0
+#         readDataSourceNames: [db-slave0]
+#         transactionalReadQueryStrategy: PRIMARY
+#         loadBalancerName: round_robin
+#       readwrite_ds1:
+#         writeDataSourceName: db1
+#         readDataSourceNames: [db-slave1]
+#         loadBalancerName: round_robin
+#         transactionalReadQueryStrategy: PRIMARY
+#     loadBalancers:
+#       round_robin:
+#         type: ROUND_ROBIN
+  - !SHARDING
+    keyGenerators:
+      custom_key_generator:
+        type: MyIdGen
+    tables:
+      t_sharding:
+        actualDataNodes: db$->{0..1}.t_sharding
+        databaseStrategy:
+#          standard:   #  standard 标准、complex 复合、hint. none
+          complex:   #  standard 标准、complex 复合、hint. none
+#            shardingColumn: user_id
+            shardingColumns: user_id,order_no
+            shardingAlgorithmName: my_complex_t_sharding_inline
+#            shardingAlgorithmName: my_t_sharding_inline
+#            shardingAlgorithmName: t_sharding_inline
+        keyGenerateStrategy:
+          column: id
+          keyGeneratorName: custom_key_generator
+      t_sharding_item:
+        actualDataNodes: db$->{0..1}.t_sharding_item
+        databaseStrategy:
+          standard:
+            shardingColumn: user_id
+#            shardingAlgorithmName: my_t_sharding_inline
+            shardingAlgorithmName: t_sharding_inline
+        keyGenerateStrategy:
+          column: id
+          keyGeneratorName: custom_key_generator
+#    bindingTables:
+#      - t_sharding, t_sharding_item
+#    auditors:
+#      sharding_key_required_auditor:
+##        type: DML_SHARDING_CONDITIONS
+#        type: MY_SHARDING_AUDIT_ALGORITHM
+    shardingAlgorithms:
+      my_t_sharding_inline:
+        type: CLASS_BASED
+        props:
+          strategy: STANDARD  #  STANDARD 标准、COMPLEX 复合、HINT
+          algorithmClassName: org.apache.shardingsphere.driver.study.MyShardingAlgorithm # 自定义类
+          number: 5 # 自定义属性
+          allow-range-query-with-inline-sharding: true # 自定义属性 （是否允许范围查询）
+      my_complex_t_sharding_inline:
+        type: CLASS_BASED
+        props:
+          strategy: COMPLEX  #  STANDARD 标准、COMPLEX 复合、HINT
+          algorithmClassName: org.apache.shardingsphere.driver.study.MyComplexShardingAlgorithm # 自定义类
+          DB_NAME: db
+          allow-range-query-with-inline-sharding: true # 自定义属性 （是否允许范围查询）
+      t_sharding_inline:
+        type: INLINE
+        props:
+          algorithm-expression: db$->{user_id % 2} # 分片算法表达式
+          allow-range-query-with-inline-sharding: true # 允许范围查询
+
+# 文档: 用户手册, 通用配置, 属性配置
+props:
+  sql-show: true

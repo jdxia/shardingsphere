@@ -123,11 +123,15 @@ public final class ShardingRule implements DatabaseRule {
         ruleConfig.getShardingAlgorithms().forEach((key, value) -> shardingAlgorithms.put(key, TypedSPILoader.getService(ShardingAlgorithm.class, value.getType(), value.getProps())));
         ruleConfig.getKeyGenerators().forEach((key, value) -> keyGenerators.put(key, TypedSPILoader.getService(KeyGenerateAlgorithm.class, value.getType(), value.getProps())));
         ruleConfig.getAuditors().forEach((key, value) -> auditors.put(key, TypedSPILoader.getService(ShardingAuditAlgorithm.class, value.getType(), value.getProps())));
+        //分表策略
         shardingTables.putAll(createShardingTables(ruleConfig.getTables(), ruleConfig.getDefaultKeyGenerateStrategy()));
         shardingTables.putAll(createShardingAutoTables(ruleConfig.getAutoTables(), ruleConfig.getDefaultKeyGenerateStrategy()));
         validateUniqueActualDataNodesInTableRules();
+        // 绑定表
         bindingTableRules.putAll(createBindingTableRules(ruleConfig.getBindingTableGroups()));
+        // 创建默认的分库规则
         defaultDatabaseShardingStrategyConfig = createDefaultDatabaseShardingStrategyConfiguration(ruleConfig);
+        // 默认的分表规则
         defaultTableShardingStrategyConfig = createDefaultTableShardingStrategyConfiguration(ruleConfig);
         defaultAuditStrategy = null == ruleConfig.getDefaultAuditStrategy() ? new ShardingAuditStrategyConfiguration(Collections.emptyList(), true) : ruleConfig.getDefaultAuditStrategy();
         defaultKeyGenerateAlgorithm = null == ruleConfig.getDefaultKeyGenerateStrategy()

@@ -32,11 +32,11 @@ import java.util.List;
  */
 @RequiredArgsConstructor
 public final class JDBCExecutor {
-    
+
     private final ExecutorEngine executorEngine;
-    
+
     private final ConnectionContext connectionContext;
-    
+
     /**
      * Execute.
      *
@@ -49,7 +49,7 @@ public final class JDBCExecutor {
     public <T> List<T> execute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext, final JDBCExecutorCallback<T> callback) throws SQLException {
         return execute(executionGroupContext, null, callback);
     }
-    
+
     /**
      * Execute.
      *
@@ -63,6 +63,7 @@ public final class JDBCExecutor {
     public <T> List<T> execute(final ExecutionGroupContext<JDBCExecutionUnit> executionGroupContext,
                                final JDBCExecutorCallback<T> firstCallback, final JDBCExecutorCallback<T> callback) throws SQLException {
         try {
+            // 往下
             return executorEngine.execute(executionGroupContext, firstCallback, callback, connectionContext.getTransactionContext().isInDistributedTransaction());
         } catch (final SQLException ex) {
             SQLExecutorExceptionHandler.handleException(ex);

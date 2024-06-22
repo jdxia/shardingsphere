@@ -78,9 +78,12 @@ public final class MergeEngine {
     
     @SuppressWarnings({"unchecked", "rawtypes"})
     private Optional<MergedResult> executeMerge(final List<QueryResult> queryResults, final SQLStatementContext sqlStatementContext) throws SQLException {
+        // 循环所有查询到的结果集
         for (Entry<ShardingSphereRule, ResultProcessEngine> entry : engines.entrySet()) {
             if (entry.getValue() instanceof ResultMergerEngine) {
+                // 创建归并器
                 ResultMerger resultMerger = ((ResultMergerEngine) entry.getValue()).newInstance(database.getName(), database.getProtocolType(), entry.getKey(), props, sqlStatementContext);
+                // 执行归并
                 return Optional.of(resultMerger.merge(queryResults, sqlStatementContext, database, connectionContext));
             }
         }

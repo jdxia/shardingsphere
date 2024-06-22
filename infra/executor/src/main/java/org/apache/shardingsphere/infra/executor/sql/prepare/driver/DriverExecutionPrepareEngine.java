@@ -36,26 +36,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Driver execution prepare engine.
- * 
+ *
  * @param <T> type of driver execution unit
  * @param <C> type of resource connection
  */
 public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>, C> extends AbstractExecutionPrepareEngine<T> {
-    
+
     @SuppressWarnings("rawtypes")
     private static final Map<String, SQLExecutionUnitBuilder> TYPE_TO_BUILDER_MAP = new ConcurrentHashMap<>(8, 1F);
-    
+
     private final DatabaseConnectionManager<C> databaseConnectionManager;
-    
+
     private final ExecutorStatementManager<C, ?, ?> statementManager;
-    
+
     private final StorageResourceOption option;
-    
+
     @SuppressWarnings("rawtypes")
     private final SQLExecutionUnitBuilder sqlExecutionUnitBuilder;
-    
+
     private final Map<String, StorageUnit> storageUnits;
-    
+
     public DriverExecutionPrepareEngine(final String type, final int maxConnectionsSizePerQuery, final DatabaseConnectionManager<C> databaseConnectionManager,
                                         final ExecutorStatementManager<C, ?, ?> statementManager, final StorageResourceOption option, final Collection<ShardingSphereRule> rules,
                                         final Map<String, StorageUnit> storageUnits) {
@@ -66,7 +66,7 @@ public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>
         sqlExecutionUnitBuilder = getCachedSqlExecutionUnitBuilder(type);
         this.storageUnits = storageUnits;
     }
-    
+
     /**
      * Refer to <a href="https://bugs.openjdk.java.net/browse/JDK-8161372">JDK-8161372</a>.
      *
@@ -81,19 +81,28 @@ public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>
         }
         return result;
     }
-    
+
+    // 分组方法中，根据模式获取连接，并创建分组
     @Override
     protected List<ExecutionGroup<T>> group(final String dataSourceName, final int connectionOffset, final List<List<ExecutionUnit>> executionUnitGroups,
                                             final ConnectionMode connectionMode) throws SQLException {
+        // 分组结果
         List<ExecutionGroup<T>> result = new LinkedList<>();
+        /**
+         * 根据模式获取连接, 获取链接以及链接的缓存都在这里
+         * 重要
+         */
         List<C> connections = databaseConnectionManager.getConnections(dataSourceName, connectionOffset, executionUnitGroups.size(), connectionMode);
         int count = 0;
+        // 循环执行单元
         for (List<ExecutionUnit> each : executionUnitGroups) {
+            // 添加执行分组
             result.add(createExecutionGroup(dataSourceName, each, connections.get(count++), connectionMode));
         }
+        // 回到开始的地方
         return result;
     }
-    
+
     @SuppressWarnings("unchecked")
     private ExecutionGroup<T> createExecutionGroup(final String dataSourceName, final List<ExecutionUnit> executionUnits, final C connection, final ConnectionMode connectionMode) throws SQLException {
         List<T> inputs = new LinkedList<>();

@@ -45,6 +45,7 @@ public final class DriverDataSourceCache {
         if (dataSourceMap.containsKey(url)) {
             return dataSourceMap.get(url);
         }
+        // createDataSource 重点
         return dataSourceMap.computeIfAbsent(url, driverUrl -> createDataSource(ShardingSphereURL.parse(driverUrl.substring(urlPrefix.length()))));
     }
     
@@ -52,6 +53,7 @@ public final class DriverDataSourceCache {
     private <T extends Throwable> DataSource createDataSource(final ShardingSphereURL url) throws T {
         try {
             ShardingSphereURLLoadEngine urlLoadEngine = new ShardingSphereURLLoadEngine(url);
+            // 往下
             return YamlShardingSphereDataSourceFactory.createDataSource(urlLoadEngine.loadContent());
         } catch (final IOException ex) {
             throw (T) new SQLException(ex);

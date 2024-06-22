@@ -91,6 +91,8 @@ public final class ShardingSphereDataSourceFactory {
      */
     public static DataSource createDataSource(final String databaseName, final ModeConfiguration modeConfig,
                                               final Map<String, DataSource> dataSourceMap, final Collection<RuleConfiguration> configs, final Properties props) throws SQLException {
+
+        // new ShardingSphereDataSource 往下看
         return new ShardingSphereDataSource(getDatabaseName(databaseName),
                 modeConfig, null == dataSourceMap ? new LinkedHashMap<>() : dataSourceMap, null == configs ? new LinkedList<>() : configs, props);
     }

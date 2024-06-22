@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
  * Hint sharding strategy configuration.
  */
 @RequiredArgsConstructor
-@Getter
+@Getter     // Hint 的分片策略配置
 public final class HintShardingStrategyConfiguration implements ShardingStrategyConfiguration {
     
     private final String shardingAlgorithmName;

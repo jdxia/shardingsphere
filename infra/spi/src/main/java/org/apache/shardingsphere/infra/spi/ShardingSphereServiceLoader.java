@@ -29,11 +29,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ShardingSphereServiceLoader {
-    
+
     private static final Map<Class<?>, RegisteredShardingSphereSPI<?>> REGISTERED_SERVICES = new ConcurrentHashMap<>();
-    
+
     private static final Object LOAD_LOCK = new Object();
-    
+
     /**
      * Get service instances.
      *
@@ -45,7 +45,7 @@ public final class ShardingSphereServiceLoader {
     public static <T> Collection<T> getServiceInstances(final Class<T> serviceInterface) {
         return (Collection<T>) getRegisteredSPI(serviceInterface).getServiceInstances();
     }
-    
+
     /*
      * @see <a href="https://bugs.openjdk.java.net/browse/JDK-8161372">JDK-8161372</a>
      */

@@ -1,0 +1,139 @@
+dataSources:
+  local:
+    url: jdbc:mysql://127.0.0.1:3306/app?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: hello.world123
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+  db0:
+    url: jdbc:mysql://127.0.0.1:3306/mybatis?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: hello.world123
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 50
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: HikariPool-db0
+  db-slave0:
+    url: jdbc:mysql://127.0.0.1:3306/mybatis?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: hello.world123
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 50
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: HikariPool-db-slave0
+  db1:
+    url: jdbc:mysql://127.0.0.1:3306/app?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: hello.world123
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 50
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: HikariPool-db1
+  db-slave1:
+    url: jdbc:mysql://127.0.0.1:3306/app?useUnicode=true&characterEncoding=utf-8&useSSL=false&verifyServerCertificate=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: hello.world123
+    driverClassName: com.mysql.cj.jdbc.Driver
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    validationTimeout: 5000
+    connectionTimeout: 30000
+    maximumPoolSize: 50
+    minimumIdle: 1
+    idleTimeout: 600000
+    leakDetectionThreshold: 0
+    keepAliveTime: 30000
+    poolName: HikariPool-db-slave1
+
+
+mode:
+  type: Standalone
+
+
+rules:
+  - !SINGLE
+    tables:
+      - "*.*"
+  - !READWRITE_SPLITTING
+    dataSources:
+      readwrite_ds0:
+        writeDataSourceName: db0
+        readDataSourceNames: [db-slave0]
+        transactionalReadQueryStrategy: PRIMARY
+        loadBalancerName: round_robin
+      readwrite_ds1:
+        writeDataSourceName: db1
+        readDataSourceNames: [db-slave1]
+        loadBalancerName: round_robin
+        transactionalReadQueryStrategy: PRIMARY
+    loadBalancers:
+      round_robin:
+        type: ROUND_ROBIN
+  - !SHARDING
+    # 雪花算法生成器
+    keyGenerators:
+      custom_key_generator:
+        type: MyIdGen
+        props:
+          worker-id: 123
+          max-tolerate-time-difference-milliseconds: 0
+          epoch-milliseconds: 2020-01-01T00:00:00
+    tables: # 数据分片规则配置
+      t_order: # 逻辑表名称
+        # 由数据源名 + 表名组成（参考 Inline 语法规则）
+        actualDataNodes: readwrite_ds$->{0..1}.t_order
+        databaseStrategy: # 分库策略，缺省表示使用默认分库策略
+          standard: # 用于单分片键的标准分片场景
+            shardingColumn: user_id  # 分片列名称
+            shardingAlgorithmName: t_order_inline # 分片算法名称
+        keyGenerateStrategy: # 分布式序列策略
+          # 自增列名称，缺省表示不使用自增主键生成器
+          column: id  # id用 自定义的key生成器
+          keyGeneratorName: custom_key_generator
+      t_order_item: # 逻辑表名称
+        # 由数据源名 + 表名组成（参考 Inline 语法规则）
+        actualDataNodes: readwrite_ds$->{0..1}.t_order_item
+        databaseStrategy: # 分库策略，缺省表示使用默认分库策略
+          standard: # 用于单分片键的标准分片场景
+            shardingColumn: user_id  # 分片列名称
+            shardingAlgorithmName: t_order_inline # 分片算法名称
+        keyGenerateStrategy: # 分布式序列策略
+          # 自增列名称，缺省表示不使用自增主键生成器
+          column: id  # id用 自定义的key生成器
+          keyGeneratorName: custom_key_generator
+      tb_user:
+        actualDataNodes: readwrite_ds0.tb_user
+    bindingTables: # 绑定表配置
+      - t_order, t_order_item
+    shardingAlgorithms:
+      t_order_inline: # 分片算法名称
+        type: INLINE
+        props:
+          algorithm-expression: readwrite_ds$->{user_id % 2} # 分片算法表达式
+          allow-range-query-with-inline-sharding: true # 允许范围查询
+  - !BROADCAST
+    tables:
+      - t_dict
+
+# 文档: 用户手册, 通用配置, 属性配置
+props:
+  sql-show: true
+
+
