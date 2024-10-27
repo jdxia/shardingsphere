@@ -96,7 +96,7 @@ public final class ComplexInlineShardingAlgorithm implements ComplexKeysSharding
 
         // 2. 获取分片键、值, 值可能有多个 比如 user_id in (2, 3 ,4)
         Map<String, Collection<Comparable<?>>> columnNameAndShardingValuesMap = shardingValue.getColumnNameAndShardingValuesMap();
-        // 这里有个奇怪的点, 如果分片列的值 == sql里面
+        // checkState 为false才抛出异常, 如果分片列的值 不等于 sql里面分片键
         ShardingSpherePreconditions.checkState(shardingColumns.isEmpty() || shardingColumns.size() == columnNameAndShardingValuesMap.size(),
                 () -> new MismatchedComplexInlineShardingAlgorithmColumnAndValueSizeException(shardingColumns.size(), columnNameAndShardingValuesMap.size()));
 

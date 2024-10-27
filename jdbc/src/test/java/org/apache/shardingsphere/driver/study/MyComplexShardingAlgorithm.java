@@ -54,19 +54,13 @@ public class MyComplexShardingAlgorithm implements ComplexKeysShardingAlgorithm<
                         .map(String::valueOf)
                         .filter(x -> !Objects.equals("0", x))  // 一些数据库默认值可能是0
                         .forEach(str -> {
-
-                            System.out.println(str.toString());
-
                             // 后四位截取
 //                            String lastFourDigits = str.length() > 4 ? str.substring(str.length() - 4) : str;
 
 //                            int resNumber = Integer.parseInt(lastFourDigits);
 
-                            int resNumber = Integer.parseInt(str);
-
                             // Step 3: 进行 取模操作
-                            String resultDB = (resNumber % dbCount) + "";
-
+                            String resultDB = (Integer.parseInt(str) % dbCount) + "";
 
                             resultSet.add(dbName + resultDB);
 
@@ -76,13 +70,8 @@ public class MyComplexShardingAlgorithm implements ComplexKeysShardingAlgorithm<
             }
         });
 
-
-
-
         return resultSet;
-
     }
-
 
     @Override
     public void init(Properties props) {
