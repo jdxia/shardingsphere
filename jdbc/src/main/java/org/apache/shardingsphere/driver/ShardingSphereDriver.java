@@ -53,7 +53,7 @@ public final class ShardingSphereDriver implements Driver {
     @HighFrequencyInvocation(canBeCached = true)
     @Override
     public Connection connect(final String url, final Properties info) throws SQLException {
-
+        // get也要看下
         return acceptsURL(url) ? dataSourceCache.get(url, DRIVER_URL_PREFIX).getConnection() : null;
     }
 

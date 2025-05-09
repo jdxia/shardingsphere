@@ -33,11 +33,11 @@ import java.util.stream.Collectors;
  * YAML data source configuration swapper.
  */
 public final class YamlDataSourceConfigurationSwapper {
-    
+
     private static final String DATA_SOURCE_CLASS_NAME_KEY = "dataSourceClassName";
-    
+
     private static final String CUSTOM_POOL_PROPS_KEY = "customPoolProps";
-    
+
     /**
      * Swap to data sources from YAML data sources.
      *
@@ -47,7 +47,7 @@ public final class YamlDataSourceConfigurationSwapper {
     public Map<String, DataSource> swapToDataSources(final Map<String, Map<String, Object>> yamlDataSources) {
         return swapToDataSources(yamlDataSources, true);
     }
-    
+
     /**
      * Swap to data sources from YAML data sources.
      *
@@ -56,9 +56,10 @@ public final class YamlDataSourceConfigurationSwapper {
      * @return data sources
      */
     public Map<String, DataSource> swapToDataSources(final Map<String, Map<String, Object>> yamlDataSources, final boolean cacheEnabled) {
+        // create 往下
         return DataSourcePoolCreator.create(yamlDataSources.entrySet().stream().collect(Collectors.toMap(Entry::getKey, entry -> swapToDataSourcePoolProperties(entry.getValue()))), cacheEnabled);
     }
-    
+
     /**
      * Get data source pool properties.
      *
@@ -71,10 +72,10 @@ public final class YamlDataSourceConfigurationSwapper {
         yamlDataSourceConfigs.forEach((key, value) -> result.put(key, swapToDataSourcePoolProperties(value)));
         return result;
     }
-    
+
     /**
      * Swap to data source pool properties.
-     * 
+     *
      * @param yamlConfig YAML configurations
      * @return data source pool properties
      */
@@ -82,7 +83,7 @@ public final class YamlDataSourceConfigurationSwapper {
         Preconditions.checkState(yamlConfig.containsKey(DATA_SOURCE_CLASS_NAME_KEY), "%s can not be null.", DATA_SOURCE_CLASS_NAME_KEY);
         return new DataSourcePoolProperties(yamlConfig.get(DATA_SOURCE_CLASS_NAME_KEY).toString(), getProperties(yamlConfig));
     }
-    
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     private Map<String, Object> getProperties(final Map<String, Object> yamlConfig) {
         Map<String, Object> result = new HashMap<>(yamlConfig);
@@ -95,10 +96,10 @@ public final class YamlDataSourceConfigurationSwapper {
         result.remove(CUSTOM_POOL_PROPS_KEY);
         return result;
     }
-    
+
     /**
      * Swap to map from data source properties.
-     * 
+     *
      * @param props data source pool properties
      * @return data source map
      */

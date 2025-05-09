@@ -33,20 +33,22 @@ import java.sql.SQLException;
  * JDBC prepared statement execution unit builder.
  */
 public final class PreparedStatementExecutionUnitBuilder implements JDBCExecutionUnitBuilder {
-    
+
     @Override
     public JDBCExecutionUnit build(final ExecutionUnit executionUnit, final ExecutorJDBCStatementManager statementManager,
                                    final Connection connection, final ConnectionMode connectionMode, final StatementOption option, final DatabaseType databaseType) throws SQLException {
+        // 往下
         PreparedStatement preparedStatement = createPreparedStatement(
                 executionUnit, statementManager, connection, connectionMode, option, databaseType);
         return new JDBCExecutionUnit(executionUnit, connectionMode, preparedStatement);
     }
-    
+
     private PreparedStatement createPreparedStatement(final ExecutionUnit executionUnit, final ExecutorJDBCStatementManager statementManager, final Connection connection,
                                                       final ConnectionMode connectionMode, final StatementOption option, final DatabaseType databaseType) throws SQLException {
+        // 往下
         return (PreparedStatement) statementManager.createStorageResource(executionUnit, connection, connectionMode, option, databaseType);
     }
-    
+
     @Override
     public String getType() {
         return JDBCDriverType.PREPARED_STATEMENT;

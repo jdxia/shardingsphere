@@ -38,7 +38,7 @@ import java.util.Optional;
  * JDBC backend statement.
  */
 public final class JDBCBackendStatement implements ExecutorJDBCStatementManager {
-    
+
     @Override
     public Statement createStorageResource(final Connection connection, final ConnectionMode connectionMode, final StatementOption option, final DatabaseType databaseType) throws SQLException {
         Statement result = connection.createStatement();
@@ -47,7 +47,7 @@ public final class JDBCBackendStatement implements ExecutorJDBCStatementManager 
         }
         return result;
     }
-    
+
     @Override
     public Statement createStorageResource(final ExecutionUnit executionUnit, final Connection connection, final ConnectionMode connectionMode, final StatementOption option,
                                            final DatabaseType databaseType) throws SQLException {
@@ -67,12 +67,14 @@ public final class JDBCBackendStatement implements ExecutorJDBCStatementManager 
             }
             index++;
         }
+
+        // 内存受限模式 设置 游标
         if (ConnectionMode.MEMORY_STRICTLY == connectionMode) {
             setFetchSize(result, databaseType);
         }
         return result;
     }
-    
+
     private void setFetchSize(final Statement statement, final DatabaseType databaseType) throws SQLException {
         Optional<StatementMemoryStrictlyFetchSizeSetter> fetchSizeSetter = DatabaseTypedSPILoader.findService(StatementMemoryStrictlyFetchSizeSetter.class, databaseType);
         if (fetchSizeSetter.isPresent()) {

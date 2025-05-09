@@ -43,10 +43,10 @@ import java.util.Map;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class YamlShardingSphereDataSourceFactory {
-    
+
     /**
      * Create ShardingSphere data source.
-     * 
+     *
      * @param yamlFile YAML file for rule configurations
      * @return ShardingSphere data source
      * @throws SQLException SQL exception
@@ -56,10 +56,10 @@ public final class YamlShardingSphereDataSourceFactory {
         YamlJDBCConfiguration rootConfig = YamlEngine.unmarshal(yamlFile, YamlJDBCConfiguration.class);
         return createDataSource(new YamlDataSourceConfigurationSwapper().swapToDataSources(rootConfig.getDataSources()), rootConfig);
     }
-    
+
     /**
      * Create ShardingSphere data source.
-     * 
+     *
      * @param yamlBytes YAML bytes for rule configurations
      * @return ShardingSphere data source
      * @throws SQLException SQL exception
@@ -67,13 +67,13 @@ public final class YamlShardingSphereDataSourceFactory {
      */
     public static DataSource createDataSource(final byte[] yamlBytes) throws SQLException, IOException {
         YamlJDBCConfiguration rootConfig = YamlEngine.unmarshal(yamlBytes, YamlJDBCConfiguration.class);
-        // 往下
+        // 往下, swapToDataSources是连接池初始化的
         return createDataSource(new YamlDataSourceConfigurationSwapper().swapToDataSources(rootConfig.getDataSources()), rootConfig);
     }
-    
+
     /**
      * Create ShardingSphere data source.
-     * 
+     *
      * @param dataSourceMap data source map
      * @param yamlFile YAML file for rule configurations
      * @return ShardingSphere data source
@@ -83,10 +83,10 @@ public final class YamlShardingSphereDataSourceFactory {
     public static DataSource createDataSource(final Map<String, DataSource> dataSourceMap, final File yamlFile) throws SQLException, IOException {
         return createDataSource(dataSourceMap, YamlEngine.unmarshal(yamlFile, YamlJDBCConfiguration.class));
     }
-    
+
     /**
      * Create ShardingSphere data source.
-     * 
+     *
      * @param dataSource data source
      * @param yamlFile YAML file for rule configurations
      * @return ShardingSphere data source
@@ -96,10 +96,10 @@ public final class YamlShardingSphereDataSourceFactory {
     public static DataSource createDataSource(final DataSource dataSource, final File yamlFile) throws SQLException, IOException {
         return createDataSource(dataSource, YamlEngine.unmarshal(yamlFile, YamlJDBCConfiguration.class));
     }
-    
+
     /**
      * Create ShardingSphere data source.
-     * 
+     *
      * @param dataSourceMap data source map
      * @param yamlBytes YAML bytes for rule configurations
      * @return ShardingSphere data source
@@ -109,10 +109,10 @@ public final class YamlShardingSphereDataSourceFactory {
     public static DataSource createDataSource(final Map<String, DataSource> dataSourceMap, final byte[] yamlBytes) throws SQLException, IOException {
         return createDataSource(dataSourceMap, YamlEngine.unmarshal(yamlBytes, YamlJDBCConfiguration.class));
     }
-    
+
     /**
      * Create ShardingSphere data source.
-     * 
+     *
      * @param dataSource data source
      * @param yamlBytes YAML bytes for rule configurations
      * @return ShardingSphere data source
@@ -122,18 +122,18 @@ public final class YamlShardingSphereDataSourceFactory {
     public static DataSource createDataSource(final DataSource dataSource, final byte[] yamlBytes) throws SQLException, IOException {
         return createDataSource(dataSource, YamlEngine.unmarshal(yamlBytes, YamlJDBCConfiguration.class));
     }
-    
+
     private static DataSource createDataSource(final DataSource dataSource, final YamlJDBCConfiguration jdbcConfig) throws SQLException {
         Map<String, DataSource> dataSourceMap = new LinkedHashMap<>(
                 Collections.singletonMap(Strings.isNullOrEmpty(jdbcConfig.getDatabaseName()) ? DefaultDatabase.LOGIC_NAME : jdbcConfig.getDatabaseName(), dataSource));
         return createDataSource(dataSourceMap, jdbcConfig);
     }
-    
+
     private static DataSource createDataSource(final Map<String, DataSource> dataSourceMap, final YamlJDBCConfiguration jdbcConfig) throws SQLException {
         ModeConfiguration modeConfig = null == jdbcConfig.getMode() ? null : new YamlModeConfigurationSwapper().swapToObject(jdbcConfig.getMode());
         jdbcConfig.rebuild();
         Collection<RuleConfiguration> ruleConfigs = new YamlRuleConfigurationSwapperEngine().swapToRuleConfigurations(jdbcConfig.getRules());
-        
+
         // 看 createDataSource
         return ShardingSphereDataSourceFactory.createDataSource(jdbcConfig.getDatabaseName(), modeConfig, dataSourceMap, ruleConfigs, jdbcConfig.getProps());
     }

@@ -41,7 +41,7 @@ import java.util.Properties;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DataSourcePoolCreator {
-    
+
     /**
      * Create data sources.
      *
@@ -52,11 +52,12 @@ public final class DataSourcePoolCreator {
     public static Map<String, DataSource> create(final Map<String, DataSourcePoolProperties> propsMap, final boolean cacheEnabled) {
         Map<String, DataSource> result = new LinkedHashMap<>();
         for (Entry<String, DataSourcePoolProperties> entry : propsMap.entrySet()) {
+            // create 往下
             result.put(entry.getKey(), create(entry.getKey(), entry.getValue(), cacheEnabled, result.values()));
         }
         return result;
     }
-    
+
     /**
      * Create data source.
      *
@@ -64,10 +65,12 @@ public final class DataSourcePoolCreator {
      * @return created data source
      */
     public static DataSource create(final DataSourcePoolProperties props) {
+        // 往下
         DataSource result = create(props.getPoolClassName());
         Optional<DataSourcePoolMetaData> poolMetaData = TypedSPILoader.findService(DataSourcePoolMetaData.class, props.getPoolClassName());
         DataSourcePoolReflection dataSourcePoolReflection = new DataSourcePoolReflection(result);
         if (poolMetaData.isPresent()) {
+            // 给连接池设置很多属性
             setDefaultFields(dataSourcePoolReflection, poolMetaData.get());
             setConfiguredFields(props, dataSourcePoolReflection, poolMetaData.get());
             appendJdbcUrlProperties(props.getCustomProperties(), result, poolMetaData.get(), dataSourcePoolReflection);
@@ -77,7 +80,7 @@ public final class DataSourcePoolCreator {
         }
         return result;
     }
-    
+
     /**
      * Create data source.
      *
@@ -87,16 +90,17 @@ public final class DataSourcePoolCreator {
      * @return created data source
      */
     public static DataSource create(final String dataSourceName, final DataSourcePoolProperties props, final boolean cacheEnabled) {
+        // 往下
         DataSource result = create(props);
         if (cacheEnabled && !GlobalDataSourceRegistry.getInstance().getCachedDataSources().containsKey(dataSourceName)) {
             GlobalDataSourceRegistry.getInstance().getCachedDataSources().put(dataSourceName, result);
         }
         return result;
     }
-    
+
     /**
      * Create data source.
-     * 
+     *
      * @param dataSourceName data source name
      * @param props data source pool properties
      * @param cacheEnabled cache enabled
@@ -115,24 +119,24 @@ public final class DataSourcePoolCreator {
             throw ex;
         }
     }
-    
+
     @SneakyThrows(ReflectiveOperationException.class)
     private static DataSource create(final String dataSourceClassName) {
         return (DataSource) Class.forName(dataSourceClassName).getConstructor().newInstance();
     }
-    
+
     private static void setDefaultFields(final DataSourcePoolReflection dataSourcePoolReflection, final DataSourcePoolMetaData poolMetaData) {
         for (Entry<String, Object> entry : poolMetaData.getDefaultProperties().entrySet()) {
             dataSourcePoolReflection.setField(entry.getKey(), entry.getValue());
         }
     }
-    
+
     private static void setConfiguredFields(final DataSourcePoolProperties props, final DataSourcePoolReflection dataSourcePoolReflection) {
         for (Entry<String, Object> entry : props.getAllLocalProperties().entrySet()) {
             dataSourcePoolReflection.setField(entry.getKey(), entry.getValue());
         }
     }
-    
+
     private static void setConfiguredFields(final DataSourcePoolProperties props, final DataSourcePoolReflection dataSourcePoolReflection, final DataSourcePoolMetaData poolMetaData) {
         for (Entry<String, Object> entry : props.getAllLocalProperties().entrySet()) {
             String fieldName = entry.getKey();
@@ -142,11 +146,11 @@ public final class DataSourcePoolCreator {
             }
         }
     }
-    
+
     private static boolean isValidProperty(final String key, final Object value, final DataSourcePoolMetaData poolMetaData) {
         return !poolMetaData.getSkippedProperties().containsKey(key) || null == value || !value.equals(poolMetaData.getSkippedProperties().get(key));
     }
-    
+
     @SuppressWarnings("unchecked")
     private static void appendJdbcUrlProperties(final CustomDataSourcePoolProperties customPoolProps, final DataSource targetDataSource, final DataSourcePoolMetaData poolMetaData,
                                                 final DataSourcePoolReflection dataSourcePoolReflection) {
@@ -157,7 +161,7 @@ public final class DataSourcePoolCreator {
             dataSourcePoolMetaDataReflection.getJdbcConnectionProperties().ifPresent(optional -> setJdbcUrlProperties(dataSourcePoolReflection, optional, jdbcUrlProps, jdbcUrlPropertiesFieldName));
         }
     }
-    
+
     private static void setJdbcUrlProperties(final DataSourcePoolReflection dataSourcePoolReflection, final Properties jdbcConnectionProps, final Map<String, Object> customProps,
                                              final String jdbcUrlPropertiesFieldName) {
         for (Entry<String, Object> entry : customProps.entrySet()) {

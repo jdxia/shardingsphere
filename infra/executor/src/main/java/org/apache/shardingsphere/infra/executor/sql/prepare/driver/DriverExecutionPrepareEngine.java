@@ -96,7 +96,10 @@ public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>
         int count = 0;
         // 循环执行单元
         for (List<ExecutionUnit> each : executionUnitGroups) {
-            // 添加执行分组
+            /**
+             * 添加执行分组
+             * createExecutionGroup 里面有 连接 内存限制模式设置游标的
+             */
             result.add(createExecutionGroup(dataSourceName, each, connections.get(count++), connectionMode));
         }
         // 回到开始的地方
@@ -108,6 +111,7 @@ public final class DriverExecutionPrepareEngine<T extends DriverExecutionUnit<?>
         List<T> inputs = new LinkedList<>();
         DatabaseType databaseType = storageUnits.get(dataSourceName).getStorageType();
         for (ExecutionUnit each : executionUnits) {
+            // 看 build方法
             inputs.add((T) sqlExecutionUnitBuilder.build(each, statementManager, connection, connectionMode, option, databaseType));
         }
         return new ExecutionGroup<>(inputs);

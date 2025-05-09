@@ -76,7 +76,7 @@ public final class DriverJDBCExecutor {
             // 执行 SQL
             processEngine.executeSQL(executionGroupContext, queryContext);
 
-            // 执行
+            // 真正 执行
             return jdbcExecutor.execute(executionGroupContext, callback);
         } finally {
 

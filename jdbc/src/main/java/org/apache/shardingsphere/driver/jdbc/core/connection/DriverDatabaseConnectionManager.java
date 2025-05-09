@@ -364,7 +364,7 @@ public final class DriverDatabaseConnectionManager implements OnlineDatabaseConn
         int maxConnectionSize = connectionOffset + connectionSize;
         if (connections.size() >= maxConnectionSize) {
             result = new ArrayList<>(connections).subList(connectionOffset, maxConnectionSize);
-        } else if (connections.isEmpty()) { //如果connections不够
+        } else if (connections.isEmpty()) {
             //创建新的connections, 重点
             Collection<Connection> newConnections = createConnections(currentDatabaseName, dataSourceName, dataSource, maxConnectionSize, connectionMode);
             result = new ArrayList<>(newConnections).subList(connectionOffset, maxConnectionSize);
